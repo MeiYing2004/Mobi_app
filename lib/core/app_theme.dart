@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-import 'ios_design_tokens.dart';
-import 'vehicle_ui_tokens.dart';
+import 'package:fuel_tracker_app/core/ios_design_tokens.dart';
+import 'package:fuel_tracker_app/core/vehicle_ui_tokens.dart';
 
 /// Theme tối premium — iPhone 17 Pro Max.
 class AppTheme {
@@ -13,7 +14,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: VehicleUi.background,
-      fontFamily: 'Inter',
+      fontFamily: GoogleFonts.inter().fontFamily,
       colorScheme: const ColorScheme.dark(
         primary: IosDesign.neonCyan,
         surface: IosDesign.titanGray,
@@ -24,7 +25,7 @@ class AppTheme {
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-      sliderTheme: SliderThemeData(
+      sliderTheme: const SliderThemeData(
         activeTrackColor: IosDesign.neonCyan,
         thumbColor: IosDesign.neonCyan,
         inactiveTrackColor: IosDesign.titanGrayLight,
@@ -41,7 +42,7 @@ class AppTheme {
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-      fontFamily: 'Inter',
+      fontFamily: GoogleFonts.inter().fontFamily,
       colorScheme: const ColorScheme.light(
         primary: Color(0xFF0A84FF),
         surface: Colors.white,
@@ -52,10 +53,10 @@ class AppTheme {
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
-      sliderTheme: SliderThemeData(
-        activeTrackColor: const Color(0xFF0A84FF),
-        thumbColor: const Color(0xFF0A84FF),
-        inactiveTrackColor: const Color(0xFFCBD5E1),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: Color(0xFF0A84FF),
+        thumbColor: Color(0xFF0A84FF),
+        inactiveTrackColor: Color(0xFFCBD5E1),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,

@@ -1,0 +1,5 @@
+{
+  "preferredWebPort": 8080,
+  "preferredProxyPort": 8765,
+  "portScanRange": 30
+}

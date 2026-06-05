@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 
-import 'hmi_intents.dart';
-import 'motion_director.dart';
+import 'package:fuel_tracker_app/core/hmi_intents.dart';
+import 'package:fuel_tracker_app/core/motion_director.dart';
 
 /// Interaction meaning layer for HMI architecture.
 ///

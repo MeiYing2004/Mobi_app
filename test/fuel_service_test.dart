@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fuel_tracker_app/services/fuel_service.dart';
-import 'package:fuel_tracker_app/services/notification_service.dart';
+import 'package:fuel_tracker_app/features/fuel/data/services/fuel_service.dart';
+import 'package:fuel_tracker_app/shared/services/notification_service.dart';
 
 void main() {
   test('FuelService exposes default fuel metrics', () {

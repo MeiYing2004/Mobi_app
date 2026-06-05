@@ -1,8 +1,8 @@
-import 'package:flutter/animation.dart';
+﻿import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/physics.dart';
 
-import 'hmi_intents.dart';
+import 'package:fuel_tracker_app/core/hmi_intents.dart';
 
 /// Unified cinematic motion timeline for map/HUD/sheet choreography.
 ///

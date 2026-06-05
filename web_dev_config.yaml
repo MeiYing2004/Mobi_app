@@ -1,0 +1,38 @@
+# Flutter Web dev server — bind LAN, built-in CORS proxy (see lib/core/lan_dev_config.dart).
+# Priority: CLI --web-hostname / --web-port > this file > Flutter default.
+# Preferred port only: scripts/run_web_lan.* auto-picks a free port if this one is busy.
+# Override preferred: config/lan_web.json or env LAN_WEB_PORT.
+server:
+  host: "0.0.0.0"
+  port: 8080
+  proxy:
+    - target: "https://nominatim.openstreetmap.org/"
+      prefix: "/nominatim/"
+      replace: "/"
+    - target: "https://router.project-osrm.org/"
+      prefix: "/osrm/"
+      replace: "/"
+    - target: "https://overpass.kumi.systems/api/interpreter"
+      prefix: "/overpass/kumi"
+      replace: ""
+    - target: "https://lz4.overpass-api.de/api/interpreter"
+      prefix: "/overpass/lz4"
+      replace: ""
+    - target: "https://overpass-api.de/api/interpreter"
+      prefix: "/overpass/de"
+      replace: ""
+    - target: "https://a.basemaps.cartocdn.com/dark_all/"
+      prefix: "/carto/dark_all/"
+      replace: "/"
+    - target: "https://a.basemaps.cartocdn.com/rastertiles/voyager/"
+      prefix: "/carto/voyager/"
+      replace: "/"
+    - target: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/"
+      prefix: "/esri/world/"
+      replace: "/"
+    - target: "https://a.tile.opentopomap.org/"
+      prefix: "/opentopo/"
+      replace: "/"
+    - target: "https://api.open-meteo.com/"
+      prefix: "/openmeteo/"
+      replace: "/"

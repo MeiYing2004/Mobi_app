@@ -1,7 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
 
 import 'package:fuel_tracker_app/core/author_integrity_guard.dart';
-import 'package:fuel_tracker_app/core/constants.dart';
+import 'package:fuel_tracker_app/core/config/constants.dart';
 
 void main() {
   test('Author credit must stay unchanged', () {

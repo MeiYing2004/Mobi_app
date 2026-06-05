@@ -1,13 +1,19 @@
+﻿import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
-import 'core/app_runtime_guard.dart';
-import 'core/author_integrity_guard.dart';
-import 'core/app_theme.dart';
-import 'providers/app_providers.dart';
-import 'screens/home_screen.dart';
-import 'services/notification_service.dart';
-import 'widgets/iphone_17_pro_max_frame.dart';
+import 'package:fuel_tracker_app/core/app_runtime_guard.dart';
+import 'package:fuel_tracker_app/core/author_integrity_guard.dart';
+import 'package:fuel_tracker_app/core/app_theme.dart';
+import 'package:fuel_tracker_app/core/web_lan_runtime.dart';
+import 'package:fuel_tracker_app/features/home_ios/presentation/launcher_shell.dart';
+import 'package:fuel_tracker_app/shared/providers/app_providers.dart';
+import 'package:fuel_tracker_app/shared/services/notification_service.dart';
+import 'package:fuel_tracker_app/shared/services/user_session_service.dart';
+import 'package:fuel_tracker_app/shared/widgets/iphone_17_pro_max_frame.dart';
+import 'package:fuel_tracker_app/shared/widgets/web_lan_debug_overlay.dart';
 
 Future<void> main() async {
   await AppRuntimeGuard.run(() async {
@@ -25,6 +31,8 @@ Future<void> main() async {
     final notificationService = NotificationService();
     await notificationService.init();
 
+    WebLanRuntime.logStartup();
+
     runApp(FuelTrackerApp(notificationService: notificationService));
   });
 }
@@ -36,17 +44,46 @@ class FuelTrackerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppProviders(
-      notificationService: notificationService,
-      child: MaterialApp(
-        title: 'Fuel Tracker Pro',
-        debugShowCheckedModeBanner: false,
-        themeMode: ThemeMode.dark,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        builder: (context, child) => IPhone17ProMaxAppShell(child: child),
-        home: const HomeScreen(),
+    return ProviderScope(
+      child: AppProviders(
+        notificationService: notificationService,
+        child: const _ThemedAppRoot(),
       ),
+    );
+  }
+}
+
+class _ThemedAppRoot extends StatelessWidget {
+  const _ThemedAppRoot();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = context.watch<UserSessionService>();
+
+    return MaterialApp(
+      title: 'Fuel Tracker Pro',
+      debugShowCheckedModeBanner: false,
+      themeMode: session.darkMode ? ThemeMode.dark : ThemeMode.light,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      builder: (context, child) {
+        Widget body = IPhone17ProMaxAppShell(
+          showInScreenChrome: false,
+          edgeToEdgeContent: true,
+          child: child,
+        );
+        if (kDebugMode && kIsWeb && WebLanRuntime.hasInfo) {
+          body = Stack(
+            fit: StackFit.expand,
+            children: [
+              body,
+              const WebLanDebugOverlay(),
+            ],
+          );
+        }
+        return body;
+      },
+      home: const LauncherShell(),
     );
   }
 }
