@@ -4,13 +4,16 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fuel_tracker_app/features/auth/models/user_model.dart';
 
 /// Đọc/ghi data.json — ưu tiên assets/data/data.json (debug) hoặc bản sao trong documents.
+/// Trên Web: lưu JSON trong SharedPreferences (localStorage), không dùng dart:io.
 class UserDataStore {
   static const assetPath = 'assets/data/data.json';
   static const projectRelativePath = 'assets/data/data.json';
+  static const _webPrefsKey = 'fuel_tracker_user_database_v1';
 
   File? _cachedFile;
   UserDatabase _db = UserDatabase.empty();
@@ -20,23 +23,87 @@ class UserDataStore {
   bool get isReady => _ready;
 
   /// Đường dẫn file JSON đang dùng (debug).
-  String? get activeFilePath => _cachedFile?.path;
+  String? get activeFilePath {
+    if (kIsWeb) return 'web:localStorage/$_webPrefsKey';
+    return _cachedFile?.path;
+  }
 
   Future<void> ensureReady() async {
     if (_ready) return;
     try {
-      final file = await _resolveWritableFile();
-      _cachedFile = file;
-      if (!await file.exists()) {
-        await _writeSeed(file);
+      if (kIsWeb) {
+        await _ensureReadyWeb();
+      } else {
+        await _ensureReadyNative();
       }
-      await _loadFromFile(file);
       _ready = true;
     } catch (e, stack) {
       debugPrint('[UserDataStore.ensureReady] $e');
       debugPrint(stack.toString());
       _db = UserDatabase.empty();
       _ready = true;
+    }
+  }
+
+  Future<void> _ensureReadyWeb() async {
+    final prefs = await SharedPreferences.getInstance();
+    var raw = prefs.getString(_webPrefsKey);
+
+    if (raw == null || raw.trim().isEmpty || !_hasDemoUsers(raw)) {
+      raw = await _loadSeedString();
+      await prefs.setString(_webPrefsKey, raw);
+    }
+
+    _db = _parseDatabase(raw);
+    if (_db.users.isEmpty) {
+      raw = await _loadSeedString();
+      await prefs.setString(_webPrefsKey, raw);
+      _db = _parseDatabase(raw);
+    }
+    debugPrint('[UserDataStore] web ready — ${_db.users.length} users');
+  }
+
+  Future<void> _ensureReadyNative() async {
+    final file = await _resolveWritableFile();
+    _cachedFile = file;
+    if (!await file.exists()) {
+      await _writeSeed(file);
+    }
+    await _loadFromFile(file);
+    if (_db.users.isEmpty && await file.exists()) {
+      await _writeSeed(file);
+      await _loadFromFile(file);
+    }
+  }
+
+  bool _hasDemoUsers(String raw) {
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      final users = map['users'] as List<dynamic>? ?? [];
+      return users.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  UserDatabase _parseDatabase(String raw) {
+    try {
+      if (raw.trim().isEmpty) return UserDatabase.empty();
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      return UserDatabase.fromJson(map);
+    } catch (e) {
+      debugPrint('[UserDataStore] parse error: $e');
+      return UserDatabase.empty();
+    }
+  }
+
+  Future<String> _loadSeedString() async {
+    try {
+      final seed = await rootBundle.loadString(assetPath);
+      return _prettyJson(seed);
+    } catch (e) {
+      debugPrint('[UserDataStore] seed load failed: $e');
+      return const JsonEncoder.withIndent('  ').convert(UserDatabase.empty().toJson());
     }
   }
 
@@ -70,8 +137,8 @@ class UserDataStore {
 
   Future<void> _writeSeed(File file) async {
     try {
-      final seed = await rootBundle.loadString(assetPath);
-      await file.writeAsString(_prettyJson(seed));
+      final seed = await _loadSeedString();
+      await file.writeAsString(seed);
     } catch (_) {
       final empty = UserDatabase.empty();
       await file.writeAsString(
@@ -119,19 +186,34 @@ class UserDataStore {
   }
 
   Future<void> save() async {
+    final json = const JsonEncoder.withIndent('  ').convert(_db.toJson());
+
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_webPrefsKey, json);
+      debugPrint('[UserDataStore] saved → web:localStorage/$_webPrefsKey');
+      return;
+    }
+
     final file = _cachedFile ?? await _resolveWritableFile();
     _cachedFile = file;
     final parent = file.parent;
     if (!await parent.exists()) {
       await parent.create(recursive: true);
     }
-    await file.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(_db.toJson()),
-    );
+    await file.writeAsString(json);
     debugPrint('[UserDataStore] saved → ${file.path}');
   }
 
   Future<void> reload() async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_webPrefsKey);
+      if (raw == null) return;
+      _db = _parseDatabase(raw);
+      return;
+    }
+
     final file = _cachedFile;
     if (file == null || !await file.exists()) return;
     await _loadFromFile(file);

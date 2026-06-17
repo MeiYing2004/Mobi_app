@@ -91,7 +91,7 @@
         }
       ],
       "fuelData": {
-        "currentFuel": 42.0,
+        "currentFuel": 41.998219255218594,
         "tankCapacity": 42.0,
         "avgConsumption": 6.5
       }
