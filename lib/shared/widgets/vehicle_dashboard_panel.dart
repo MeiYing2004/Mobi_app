@@ -1,8 +1,9 @@
-﻿import 'dart:ui';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:fuel_tracker_app/core/theme/luxury_tokens.dart';
+import 'package:fuel_tracker_app/core/theme/luxury_widgets.dart';
 import 'package:fuel_tracker_app/core/vehicle_ui_tokens.dart';
 import 'package:fuel_tracker_app/features/fuel/data/services/fuel_service.dart';
 
@@ -23,194 +24,210 @@ class VehicleDashboardPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final b = Theme.of(context).brightness;
     final percent = fuel.fuelPercent.clamp(0.0, 100.0);
     final remaining = fuel.remainingDistanceKm;
     final efficiency = _litersPer100Km;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(VehicleUi.radiusLg),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-            decoration: BoxDecoration(
-              color: VehicleUi.cardFor(b).withValues(alpha: 0.94),
-              borderRadius: BorderRadius.circular(VehicleUi.radiusLg),
-              border: Border.all(color: VehicleUi.glassBorderFor(b)),
-              boxShadow: [
-                const BoxShadow(
-                  color: Color(0x1F000000),
-                  blurRadius: 22,
-                  spreadRadius: -10,
-                  offset: Offset(0, 14),
+      child: VisionProFloatingCard(
+        borderRadius: LuxuryTokens.radiusLg,
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+        elevation: lowFuel ? 2 : 4,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top edge highlight — Vision Pro glass rim.
+            Container(
+              height: 1.5,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(1),
+                gradient: LinearGradient(
+                  colors: [
+                    LuxuryTokens.neonCyan.withValues(alpha: 0.5),
+                    Colors.white.withValues(alpha: 0.08),
+                    LuxuryTokens.neonBlue.withValues(alpha: 0.35),
+                  ],
                 ),
-                BoxShadow(
-                  color: VehicleUi.accentBlue.withValues(alpha: 0.07),
-                  blurRadius: 48,
-                  spreadRadius: -34,
-                  offset: const Offset(0, 10),
-                ),
-              ],
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                // Subtle top illumination line (understated).
-                Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        VehicleUi.accentBlue.withValues(alpha: 0.35),
-                        Colors.white.withValues(alpha: 0.06),
-                        VehicleUi.accentBlue.withValues(alpha: 0.18),
-                      ],
-                    ),
-                  ),
+                _FuelPercentRing(
+                  percent: percent,
+                  lowFuel: lowFuel,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    _FuelPercentRing(
-                      percent: percent,
-                      lowFuel: lowFuel,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quãng đường còn',
+                        style: VehicleUi.statLabel(),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Quãng đường còn',
-                            style: VehicleUi.statLabel(),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                remaining.toStringAsFixed(0),
-                                style: VehicleUi.statValue(
-                                  color: VehicleUi.accentBlue,
-                                  size: 26,
-                                ),
-                              ),
-                              Text(
-                                'km',
-                                style: VehicleUi.statValue(
-                                  color: VehicleUi.accentBlue,
-                                  size: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Hiệu suất (tiêu hao)',
-                            style: VehicleUi.statLabel(
-                              color: VehicleUi.textSecondary.withValues(alpha: 0.85),
+                            remaining.toStringAsFixed(0),
+                            style: VehicleUi.statValue(
+                              color: LuxuryTokens.neonBlue,
+                              size: 28,
                             ),
                           ),
-                          const SizedBox(height: 6),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                efficiency.toStringAsFixed(1),
-                                style: VehicleUi.statValue(
-                                  color: VehicleUi.textPrimary,
-                                  size: 22,
-                                ),
-                              ),
-                              Text(
-                                'L/100km',
-                                style: VehicleUi.statValue(
-                                  color: VehicleUi.textSecondary.withValues(alpha: 0.95),
-                                  size: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
                           Text(
-                            'Cập nhật theo GPS',
-                            style: TextStyle(
-                              color: VehicleUi.textSecondary.withValues(alpha: 0.8),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              height: 1.3,
+                            'km',
+                            style: VehicleUi.statValue(
+                              color: LuxuryTokens.neonBlue,
+                              size: 14,
                             ),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Hiệu suất (tiêu hao)',
+                        style: VehicleUi.statLabel(
+                          color: VehicleUi.textSecondary.withValues(alpha: 0.85),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            efficiency.toStringAsFixed(1),
+                            style: VehicleUi.statValue(
+                              color: VehicleUi.textPrimary,
+                              size: 22,
+                            ),
+                          ),
+                          Text(
+                            'L/100km',
+                            style: VehicleUi.statValue(
+                              color: VehicleUi.textSecondary.withValues(alpha: 0.95),
+                              size: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Cập nhật theo GPS',
+                        style: TextStyle(
+                          color: VehicleUi.textSecondary.withValues(alpha: 0.8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (lowFuel) ...[
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: VehicleUi.warningRed.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(VehicleUi.radiusSm),
+                  border: Border.all(
+                    color: VehicleUi.warningRed.withValues(alpha: 0.35),
+                  ),
+                  boxShadow: LuxuryTokens.elevation(1, glow: VehicleUi.warningRed),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: VehicleUi.warningRed, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Sắp hết xăng — tìm trạm gần nhất',
+                        style: TextStyle(
+                          color: Color(0xFFFCA5A5),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                if (lowFuel) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: VehicleUi.warningRed.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(VehicleUi.radiusSm),
-                      border: Border.all(
-                        color: VehicleUi.warningRed.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: VehicleUi.warningRed, size: 18),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Sắp hết xăng — tìm trạm gần nhất',
-                            style: TextStyle(
-                              color: Color(0xFFFCA5A5),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _FuelPercentRing extends StatelessWidget {
+class _FuelPercentRing extends StatefulWidget {
   final double percent;
   final bool lowFuel;
 
   const _FuelPercentRing({required this.percent, required this.lowFuel});
 
   @override
-  Widget build(BuildContext context) {
-    final active = lowFuel ? VehicleUi.warningRed : VehicleUi.accentBlue;
-    final p = (percent / 100).clamp(0.0, 1.0);
+  State<_FuelPercentRing> createState() => _FuelPercentRingState();
+}
 
-    return SizedBox(
-      width: 110,
-      height: 110,
+class _FuelPercentRingState extends State<_FuelPercentRing>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.lowFuel ? VehicleUi.warningRed : LuxuryTokens.neonBlue;
+    final p = (widget.percent / 100).clamp(0.0, 1.0);
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final glow = 0.15 + _pulse.value * 0.2;
+        return Container(
+          width: 118,
+          height: 118,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: active.withValues(alpha: glow),
+                blurRadius: 18 + _pulse.value * 10,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+          child: child,
+        );
+      },
       child: TweenAnimationBuilder<double>(
-        key: ValueKey(percent.toStringAsFixed(2)),
+        key: ValueKey(widget.percent.toStringAsFixed(2)),
         tween: Tween<double>(begin: 0.0, end: p),
-        duration: const Duration(milliseconds: 900),
-        curve: Curves.fastLinearToSlowEaseIn,
+        duration: const Duration(milliseconds: 1100),
+        curve: Curves.easeOutCubic,
         builder: (context, value, child) {
           return CustomPaint(
             foregroundPainter: _FuelRingPainter(

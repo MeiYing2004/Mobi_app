@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fuel_tracker_app/features/home_ios/core/ios_haptics.dart';
@@ -17,6 +17,7 @@ import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/notifica
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/spotlight_overlay.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_home_theme.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/wallpaper_widget.dart';
+import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
 
 /// Màn hình Home — tách layer để giảm rebuild khi mở app / đổi trang.
 class IosHomeScreen extends ConsumerWidget {
@@ -43,13 +44,19 @@ class IosHomeScreen extends ConsumerWidget {
         },
         child: Stack(
           fit: StackFit.expand,
-          clipBehavior: Clip.none,
+          clipBehavior: Clip.hardEdge,
           children: [
             const RepaintBoundary(child: _WallpaperLayer()),
-            RepaintBoundary(
-              child: _HomePagesLayer(
-                metrics: metrics,
-                onLaunchApp: onLaunchApp,
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: metrics.dockZoneHeight,
+              child: RepaintBoundary(
+                child: _HomePagesLayer(
+                  metrics: metrics,
+                  onLaunchApp: onLaunchApp,
+                ),
               ),
             ),
             Positioned(
@@ -145,7 +152,7 @@ class _HomePagesLayerState extends ConsumerState<_HomePagesLayer> {
   }
 
   void _handleAppTap(IosAppModel app, BuildContext iconContext) {
-    if (app.isFuelTracker) {
+    if (app.isLaunchable) {
       widget.onLaunchApp(app, _globalRect(iconContext));
       return;
     }
@@ -165,16 +172,11 @@ class _HomePagesLayerState extends ConsumerState<_HomePagesLayer> {
   }
 
   void _showPlaceholder(String appName) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('$appName chưa được cài đặt'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(milliseconds: 1400),
-          backgroundColor: Colors.white.withValues(alpha: 0.12),
-        ),
-      );
+    AppToastService.info(
+      title: 'Ứng dụng chưa khả dụng',
+      message: '$appName chưa được cài đặt',
+      duration: const Duration(milliseconds: 1400),
+    );
   }
 
   @override
@@ -209,7 +211,8 @@ class _HomePagesLayerState extends ConsumerState<_HomePagesLayer> {
                     ? const NeverScrollableScrollPhysics()
                     : const BouncingScrollPhysics(),
                 padding: EdgeInsets.only(
-                  bottom: metrics.pageScrollBottomPadding,
+                  bottom: metrics.contentBottomClearance -
+                      metrics.dockZoneHeight,
                 ),
                 child: HomeIconGrid(
                   metrics: metrics,
@@ -258,7 +261,7 @@ class _DockLayer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     void handleTap(IosAppModel app, BuildContext ctx) {
-      if (app.isFuelTracker) {
+      if (app.isLaunchable) {
         final box = ctx.findRenderObject() as RenderBox?;
         final rect = box != null && box.hasSize
             ? box.localToGlobal(Offset.zero) & box.size
@@ -325,7 +328,7 @@ class _SystemOverlaysLayer extends ConsumerWidget {
           onDismiss: () => ref.read(systemOverlayProvider.notifier).dismiss(),
           onAppSelected: (app) {
             ref.read(systemOverlayProvider.notifier).dismiss();
-            if (app.isFuelTracker) {
+            if (app.isLaunchable) {
               onLaunchApp(app, null);
             }
           },

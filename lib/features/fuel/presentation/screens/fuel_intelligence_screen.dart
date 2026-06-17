@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
@@ -16,6 +16,8 @@ import 'package:fuel_tracker_app/features/fuel/presentation/viewmodels/fuel_inte
 import 'package:fuel_tracker_app/features/fuel/presentation/widgets/fuel_consumption_graph.dart';
 import 'package:fuel_tracker_app/features/fuel/presentation/widgets/fuel_intelligence_shell.dart';
 import 'package:fuel_tracker_app/features/fuel/presentation/widgets/fuel_weather_card.dart';
+import 'package:fuel_tracker_app/features/premium/premium_manager.dart';
+import 'package:fuel_tracker_app/features/premium/widgets/premium_guard.dart';
 
 class FuelIntelligenceScreen extends StatefulWidget {
   const FuelIntelligenceScreen({super.key});
@@ -23,8 +25,8 @@ class FuelIntelligenceScreen extends StatefulWidget {
   static Future<void> open(BuildContext context) {
     return Navigator.of(context).push(
       PageRouteBuilder<void>(
-        opaque: false,
-        barrierColor: Colors.black54,
+        opaque: true,
+        barrierColor: null,
         transitionDuration: const Duration(milliseconds: 520),
         reverseTransitionDuration: const Duration(milliseconds: 420),
         pageBuilder: (_, __, ___) => const FuelIntelligenceScreen(),
@@ -87,9 +89,12 @@ class _FuelIntelligenceScreenState extends State<FuelIntelligenceScreen> {
     return ChangeNotifierProvider.value(
       value: _vm,
       child: FuelIntelligenceShell(
-        title: 'Phân tích nhiên liệu',
         onClose: () => Navigator.pop(context),
-        body: Consumer<FuelIntelligenceViewModel>(
+        body: PremiumGuard(
+          feature: PremiumFeature.fuelAnalytics,
+          title: 'Fuel Analytics',
+          description: 'Unlock advanced AI fuel prediction & optimization',
+          child: Consumer<FuelIntelligenceViewModel>(
           builder: (context, vm, _) {
             if (!vm.isReady) {
               return const FuelIntelligenceContentLoader(
@@ -115,81 +120,103 @@ class _FuelIntelligenceScreenState extends State<FuelIntelligenceScreen> {
 
             _pushGraphPoint(p);
 
-            return SingleChildScrollView(
+            return CustomScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.fromLTRB(20, 8, 20, 28 + bottomInset + 36),
-              child: Column(
-                children: [
-                  if (vm.loadError != null) ...[
-                    _InlineErrorBanner(message: vm.loadError!),
-                    const SizedBox(height: 12),
-                  ],
-                  _HeroSection(prediction: p),
-                  const SizedBox(height: 14),
-                  if (vm.warnings.isNotEmpty) ...[
-                    _WarningCard(warning: vm.warnings.first),
-                    const SizedBox(height: 14),
-                  ],
-                  IosGlassCard(child: _LiveAnalyticsCard(prediction: p)),
-                  const SizedBox(height: 14),
-                  const IosGlassCard(child: _FuelDemoTestCard()),
-                  if (p.hudInsights.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    IosGlassCard(
-                      child: _PredictiveHudCard(
-                        insights: p.hudInsights,
-                        risk: p.routeRiskLevel,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  IosGlassCard(
-                    child: _NearbyStationsCard(
-                      prediction: p,
-                      stationsCount: vm.nearbyStations.length,
-                      nearestKm: vm.rankedStations.isNotEmpty
-                          ? vm.rankedStations.first.station.distanceKm
-                          : (vm.nearbyStations.isNotEmpty
-                              ? vm.nearbyStations.first.distanceKm
-                              : null),
-                      onRefresh: vm.refreshStations,
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  floating: true,
+                  snap: true,
+                  automaticallyImplyLeading: false,
+                  backgroundColor: const Color(0xE6081120),
+                  elevation: 0,
+                  title: Text(
+                    'Phân tích nhiên liệu',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.4,
+                      color: Colors.white.withValues(alpha: 0.95),
+                      fontSize: 17,
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  IosGlassCard(
-                    padding: const EdgeInsets.all(12),
-                    child: FuelWeatherCard(
-                      weather: vm.weather,
-                      loading: vm.weatherLoading,
-                      onRefresh: () => vm.refreshWeather(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  IosGlassCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mức tiêu hao nhiên liệu (thời gian thực)',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                            color: Colors.white.withValues(alpha: 0.92),
+                ),
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(20, 8, 20, 28 + bottomInset + 36),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      if (vm.loadError != null) ...[
+                        _InlineErrorBanner(message: vm.loadError!),
+                        const SizedBox(height: 12),
+                      ],
+                      _HeroSection(prediction: p),
+                      const SizedBox(height: 14),
+                      if (vm.warnings.isNotEmpty) ...[
+                        _WarningCard(warning: vm.warnings.first),
+                        const SizedBox(height: 14),
+                      ],
+                      IosGlassCard(child: _LiveAnalyticsCard(prediction: p)),
+                      const SizedBox(height: 14),
+                      const IosGlassCard(child: _FuelDemoTestCard()),
+                      if (p.hudInsights.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        IosGlassCard(
+                          child: _PredictiveHudCard(
+                            insights: p.hudInsights,
+                            risk: p.routeRiskLevel,
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        FuelConsumptionGraph(
-                          points: _graph,
-                          minLPer100Km: 2,
-                          maxLPer100Km: 22,
-                        ),
                       ],
-                    ),
+                      const SizedBox(height: 14),
+                      IosGlassCard(
+                        child: _NearbyStationsCard(
+                          prediction: p,
+                          stationsCount: vm.nearbyStations.length,
+                          nearestKm: vm.rankedStations.isNotEmpty
+                              ? vm.rankedStations.first.station.distanceKm
+                              : (vm.nearbyStations.isNotEmpty
+                                  ? vm.nearbyStations.first.distanceKm
+                                  : null),
+                          onRefresh: vm.refreshStations,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      IosGlassCard(
+                        padding: const EdgeInsets.all(12),
+                        child: FuelWeatherCard(
+                          weather: vm.weather,
+                          loading: vm.weatherLoading,
+                          onRefresh: () => vm.refreshWeather(),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      IosGlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Mức tiêu hao nhiên liệu (thời gian thực)',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
+                                color: Colors.white.withValues(alpha: 0.92),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            FuelConsumptionGraph(
+                              points: _graph,
+                              minLPer100Km: 2,
+                              maxLPer100Km: 22,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ]),
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
+        ),
         ),
       ),
     );
@@ -825,26 +852,34 @@ class _WarningCard extends StatelessWidget {
       WarningSeverity.warning => 1700,
       WarningSeverity.critical => 1150,
     };
-    return IosGlassCard(
-      glowWarning: warning.severity == WarningSeverity.critical,
-      borderColor: color,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            warning.title,
-            style: TextStyle(
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.4,
-              color: color,
+    return Card(
+      elevation: 4,
+      margin: EdgeInsets.zero,
+      color: color.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withValues(alpha: 0.55)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              warning.title,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.4,
+                color: color,
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            warning.message,
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.82)),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              warning.message,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.82)),
+            ),
+          ],
+        ),
       ),
     )
         .animate(

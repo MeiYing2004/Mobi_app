@@ -1,119 +1,155 @@
-# Flutter Web 局域网访问指南
-
-## 一条命令（推荐）
-
-**Windows（PowerShell）：**
-
-```powershell
+Hướng dẫn truy cập Flutter Web trong mạng LAN
+Chạy bằng một lệnh (Khuyến nghị)
+Windows (PowerShell)
 cd D:\Mobiapp
 .\scripts\run_web_lan.ps1
-```
-
-**macOS / Linux：**
-
-```bash
+macOS / Linux
 chmod +x scripts/run_web_lan.sh
 ./scripts/run_web_lan.sh
-```
 
-脚本会自动：
+Script sẽ tự động:
 
-1. 检测 **LAN IPv4**（非 `127.0.0.1`）
-2. 从 `config/lan_web.json` 读取**首选端口**，若被占用则扫描下一个可用端口
-3. 以 **`0.0.0.0`** 启动 `web-server`（非 localhost）
-4. 在控制台打印 **Local URL** 与 **手机 LAN URL**
-5. 提示防火墙注意事项
-6. 通过内置 `web_dev_config.yaml` 代理解决 **CORS**（默认单端口，手机只需开一个端口）
+Phát hiện địa chỉ IPv4 trong mạng LAN (không phải 127.0.0.1)
+Đọc cổng ưu tiên từ config/lan_web.json, nếu cổng đang bận sẽ tự tìm cổng trống tiếp theo
+Khởi động Flutter Web bằng địa chỉ 0.0.0.0 (không phải localhost)
+Hiển thị URL truy cập trên máy tính và URL truy cập từ điện thoại
+Hiển thị cảnh báo liên quan đến tường lửa
+Tự xử lý CORS thông qua web_dev_config.yaml (điện thoại chỉ cần mở 1 cổng)
 
-终端绿色行即为手机浏览器地址，例如：
+Ví dụ sau khi chạy:
 
-```text
 http://192.168.1.42:8080
-```
 
-若首选端口被占用，会显示实际端口，例如 `8081 (preferred 8080 was busy)`。
+Nếu cổng 8080 đang được sử dụng:
 
-## 应用内调试
+http://192.168.1.42:8081
+Debug trong ứng dụng
 
-Debug 构建在 Web 上会显示 **LAN debug** 浮层，包含：
+Khi chạy bản Debug trên Web sẽ xuất hiện bảng thông tin LAN:
 
-- Port（当前端口）
-- Local URL（`http://127.0.0.1:<port>`）
-- LAN URL（手机访问地址）
-- CORS 模式
+Hiển thị:
 
-启动时也会在控制台打印相同信息（`WebLanRuntime.logStartup`）。
+Port hiện tại
+URL localhost
+URL truy cập từ điện thoại
+Chế độ CORS
 
-## 配置端口（非硬编码在脚本中）
+Ngoài ra các thông tin này cũng được ghi ra terminal.
 
-| 来源 | 说明 |
-|------|------|
-| `config/lan_web.json` | `preferredWebPort`、`portScanRange`（主配置） |
-| `web_dev_config.yaml` | `server.port` 作为首选端口回退 |
-| 环境变量 `LAN_WEB_PORT` | 覆盖首选 Web 端口 |
-| 环境变量 `LAN_PORT_SCAN_RANGE` | 扫描范围（默认 30） |
+Cấu hình cổng
+Nguồn cấu hình	Mô tả
+config/lan_web.json	preferredWebPort, portScanRange
+web_dev_config.yaml	Cổng mặc định dự phòng
+LAN_WEB_PORT	Ghi đè cổng web
+LAN_PORT_SCAN_RANGE	Số lượng cổng quét
+Truy cập từ điện thoại
+Bước 1
 
-## 手机访问步骤
+Đảm bảo:
 
-1. 电脑与手机连接**同一 Wi-Fi**（避免访客网络/AP 隔离）。
-2. 运行 `.\scripts\run_web_lan.ps1`，等待 Flutter 编译完成。
-3. 在手机浏览器输入终端中的 **Phone (same Wi-Fi)** URL。
-4. 若无法打开：见下方故障排查。
+Máy tính và điện thoại cùng kết nối một Wi-Fi
+Không dùng mạng khách (Guest Network)
+Bước 2
 
-## 架构说明
+Chạy:
 
-| 组件 | 绑定 | CORS |
-|------|------|------|
-| Flutter Web | `0.0.0.0` + 动态端口 | — |
-| 内置代理 | 与 Web **同端口** | `web_dev_config.yaml` 转发 `/nominatim`、`/osrm` 等 |
-| 外部代理（可选） | `0.0.0.0` + 独立端口 | `tool/dev_cors_proxy.dart`，需 `-ExternalProxy` |
+.\scripts\run_web_lan.ps1
+Bước 3
 
-默认**不需要**第二个端口，手机只访问 Web URL 即可使用地图与搜索。
+Đợi Flutter build xong.
 
-### 可选：外部 CORS 代理
+Bước 4
 
-```powershell
+Mở trình duyệt trên điện thoại.
+
+Nhập URL LAN mà terminal hiển thị.
+
+Ví dụ:
+
+http://192.168.1.42:8080
+Kiến trúc hoạt động
+Thành phần	Địa chỉ	CORS
+Flutter Web	0.0.0.0 + cổng động	Không
+Proxy tích hợp	Cùng cổng với Web	Chuyển tiếp nominatim, osrm...
+Proxy ngoài (tuỳ chọn)	Cổng riêng	Có
+
+Mặc định chỉ cần một cổng.
+
+Điện thoại chỉ truy cập URL Web là dùng được.
+
+Proxy CORS bên ngoài (Tuỳ chọn)
+Windows
 .\scripts\run_web_lan.ps1 -ExternalProxy
-```
-
-```bash
+macOS/Linux
 EXTERNAL_PROXY=1 ./scripts/run_web_lan.sh
-```
+Tường lửa
+Windows
 
-## 防火墙
+Lần đầu chạy:
 
-- **Windows**：防火墙开启时，首次运行请允许 **Dart / flutter** 在**专用网络**入站；或手动放行脚本打印的 TCP 端口。
-- **macOS**：系统设置 → 网络 → 防火墙 → 允许开发工具入站。
-- **Linux**：`ufw allow <port>/tcp` 或临时关闭防火墙测试。
+Cho phép Dart
+Cho phép Flutter
 
-脚本启动前会检测 Windows 防火墙状态并提示。
+truy cập mạng riêng (Private Network)
 
-## 故障排查（手机仍无法访问）
+Hoặc mở thủ công cổng mà script thông báo.
 
-| 现象 | 可能原因 | 处理 |
-|------|----------|------|
-| 无法打开页面 | 不同 Wi-Fi / AP 隔离 | 确认同一局域网；关闭路由器「访客网络隔离」 |
-| 无法打开页面 | 防火墙拦截 | 放行打印的端口；专用网络允许 Flutter |
-| 无法打开页面 | 用了 `127.0.0.1` 或 localhost | 必须用终端打印的 **LAN URL**（`192.168.x.x` 等） |
-| 无法打开页面 | 电脑 IP 变化 | 重新运行脚本，以新 URL 为准 |
-| 页面空白 / 加载失败 | 编译未完成 | 等待 `flutter run` 显示 serving 后再用手机访问 |
-| 能开页但无地图/搜索 | 未用 `web-server` 或未走代理 | 使用 `run_web_lan` 脚本，不要仅用 `chrome` device |
-| 能开页但无地图/搜索 | CORS | 确认未删掉 `web_dev_config.yaml`；或试 `-ExternalProxy` |
-| GPS 不可用 | 浏览器策略 | `http://局域网IP` 上定位常被拒绝；用 Android 原生包或 HTTPS |
+macOS
 
-仅预览 URL、不启动服务：
+Vào:
 
-```powershell
+System Settings
+→ Network
+→ Firewall
+
+Cho phép công cụ phát triển truy cập mạng.
+
+Linux
+ufw allow <port>/tcp
+
+hoặc tắt firewall để kiểm tra.
+
+Khắc phục sự cố
+Hiện tượng	Nguyên nhân	Cách xử lý
+Không mở được trang	Không cùng Wi-Fi	Kết nối cùng mạng
+Không mở được trang	Firewall chặn	Mở cổng
+Không mở được trang	Dùng localhost hoặc 127.0.0.1	Dùng IP LAN
+Không mở được trang	IP máy tính thay đổi	Chạy lại script
+Trang trắng	Build chưa xong	Đợi Flutter compile xong
+Có giao diện nhưng không có bản đồ	Chưa dùng run_web_lan	Chạy đúng script
+Có giao diện nhưng tìm kiếm không hoạt động	Lỗi CORS	Kiểm tra web_dev_config.yaml
+GPS không hoạt động	Trình duyệt chặn	Dùng HTTPS hoặc app Android
+Chỉ xem URL LAN
+
+Không khởi động server:
+
 .\scripts\print_lan_urls.ps1
-```
+Các file liên quan
+scripts/run_web_lan.ps1
+scripts/run_web_lan.sh
 
-## 相关文件
+scripts/port_utils.ps1
+scripts/port_utils.sh
 
-- `scripts/run_web_lan.ps1` / `scripts/run_web_lan.sh`
-- `scripts/port_utils.ps1` / `scripts/port_utils.sh`
-- `scripts/get_lan_ip.ps1`
-- `config/lan_web.json`
-- `web_dev_config.yaml`
-- `lib/core/web_lan_runtime.dart`
-- `lib/widgets/web_lan_debug_overlay.dart`
-- `lib/core/lan_dev_config.dart`
+scripts/get_lan_ip.ps1
+
+config/lan_web.json
+
+web_dev_config.yaml
+
+lib/core/web_lan_runtime.dart
+
+lib/widgets/web_lan_debug_overlay.dart
+
+lib/core/lan_dev_config.dart
+
+Tóm lại: chỉ cần chạy
+
+cd D:\Mobiapp
+.\scripts\run_web_lan.ps1
+
+sau đó lấy địa chỉ kiểu:
+
+http://192.168.x.x:8080
+
+nhập vào điện thoại cùng Wi-Fi là có thể xem Flutter Web trên điện thoại.

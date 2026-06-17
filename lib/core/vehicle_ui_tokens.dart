@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 
+import 'package:fuel_tracker_app/core/theme/app_colors.dart';
+
 /// Premium EV map dashboard — iOS 18 / Apple Maps night aesthetic.
 class VehicleUi {
   VehicleUi._();
 
-  // Core palette
-  static const Color background = Color(0xFF081120);
-  static const Color card = Color(0xFF142235);
-  // "Silent luxury" electric blue: less neon, more desaturated.
-  static const Color accentBlue = Color(0xFF3B7DDF);
+  // Core palette — alias [AppColors] để đồng bộ theme toàn app.
+  static const Color background = AppColors.backgroundDark;
+  static const Color card = AppColors.surfaceDark;
+  static const Color accentBlue = AppColors.primaryDark;
   static const Color accentBlueGlow = Color(0x263B7DDF);
   static const Color accentBlueInnerGlow = Color(0x4D3B7DDF);
-  static const Color successGreen = Color(0xFF22C55E);
-  static const Color warningRed = Color(0xFFE85A4E);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF7E8AA3);
+  static const Color successGreen = AppColors.secondaryDark;
+  static const Color warningRed = AppColors.errorDark;
+  static const Color textPrimary = AppColors.textPrimaryDark;
+  static const Color textSecondary = AppColors.textSecondaryDark;
 
-  static const Color surfaceDark = background;
-  static const Color surfaceLight = Color(0xFFF8FAFC);
+  static const Color surfaceDark = AppColors.backgroundDark;
+  static const Color surfaceLight = AppColors.background;
 
   // Glass (dark) — subtle, not muddy
   static const Color glassFill = Color(0xB3142235);
@@ -87,6 +88,22 @@ class VehicleUi {
       offset: Offset(0, 8),
     ),
   ];
+
+  /// Neon luxury glow — Tesla / Linear accent.
+  static const Color neonBlue = Color(0xFF4DA3FF);
+  static const Color neonCyan = Color(0xFF00E5FF);
+
+  static List<BoxShadow> luxuryGlow({Color color = neonBlue, int depth = 2}) {
+    final blur = 12.0 + depth * 8.0;
+    return [
+      BoxShadow(
+        color: color.withValues(alpha: 0.22 + depth * 0.06),
+        blurRadius: blur,
+        spreadRadius: -4,
+        offset: Offset(0, 4 + depth * 2),
+      ),
+    ];
+  }
 
   static bool _isLight(Brightness b) => b == Brightness.light;
 

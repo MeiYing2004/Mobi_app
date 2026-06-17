@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -12,6 +12,9 @@ import 'package:fuel_tracker_app/features/navigation/data/models/navigation_rout
 import 'package:fuel_tracker_app/features/fuel/data/models/refuel_flow_phase.dart';
 import 'package:fuel_tracker_app/features/fuel/data/models/route_fuel_analysis.dart';
 import 'package:fuel_tracker_app/features/fuel/data/models/trip_fuel_status.dart';
+import 'package:fuel_tracker_app/features/premium/premium_manager.dart';
+import 'package:fuel_tracker_app/features/premium/widgets/premium_bottom_sheet.dart';
+import 'package:fuel_tracker_app/features/premium/widgets/premium_guard.dart';
 
 /// Cinematic Navigation HUD — quiet hierarchy, spatial depth above map.
 class NavigationHud extends StatefulWidget {
@@ -279,52 +282,62 @@ class _ExpandedHudCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MiniFuelStat(
-                            label: 'Xăng hiện tại',
-                            value:
-                                '${fuel.currentFuelLiters.toStringAsFixed(1)} L',
+                    PremiumGuard(
+                      feature: PremiumFeature.fuelAnalytics,
+                      showLockOverlay: false,
+                      lockedPreview: const _LockedFuelAnalyticsPreview(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _MiniFuelStat(
+                                  label: 'Xăng hiện tại',
+                                  value:
+                                      '${fuel.currentFuelLiters.toStringAsFixed(1)} L',
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _MiniFuelStat(
+                                  label: 'Có thể đi',
+                                  value: fuel.rangeLabel,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _MiniFuelStat(
-                            label: 'Có thể đi',
-                            value: fuel.rangeLabel,
+                          const SizedBox(height: 8),
+                          Text(
+                            'Dự kiến còn ${fuel.fuelAfterArrivalLabel} khi tới nơi • '
+                            '${fuel.stationsOnRouteCount} cây xăng trên tuyến',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: VehicleUi.textMuted.withValues(alpha: 0.9),
+                              height: 1.25,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Dự kiến còn ${fuel.fuelAfterArrivalLabel} khi tới nơi • '
-                      '${fuel.stationsOnRouteCount} cây xăng trên tuyến',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: VehicleUi.textMuted.withValues(alpha: 0.9),
-                        height: 1.25,
+                          const SizedBox(height: 6),
+                          Text(
+                            fuel.status.label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: fuel.status.circleFill,
+                            ),
+                          ),
+                          if (_refuelCardVisible(fuel, refuelPhase)) ...[
+                            const SizedBox(height: 12),
+                            _RefuelFlowCard(
+                              phase: refuelPhase ?? RefuelFlowPhase.needRefuel,
+                              onNavigateToNearestStation: onNavigateToNearestStation,
+                              onContinueTrip: onContinueTrip,
+                              onDemoRefuel: onDemoRefuel,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      fuel.status.label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: fuel.status.circleFill,
-                      ),
-                    ),
-                    if (_refuelCardVisible(fuel, refuelPhase)) ...[
-                      const SizedBox(height: 12),
-                      _RefuelFlowCard(
-                        phase: refuelPhase ?? RefuelFlowPhase.needRefuel,
-                        onNavigateToNearestStation: onNavigateToNearestStation,
-                        onContinueTrip: onContinueTrip,
-                        onDemoRefuel: onDemoRefuel,
-                      ),
-                    ],
                     const SizedBox(height: 10),
                     Text(
                       'OSRM • OpenStreetMap',
@@ -576,6 +589,103 @@ class _MiniFuelStat extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LockedFuelAnalyticsPreview extends StatelessWidget {
+  const _LockedFuelAnalyticsPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: VehicleUi.accentBlue.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: VehicleUi.accentBlue.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: VehicleUi.accentBlue.withValues(alpha: 0.22),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_rounded,
+                  size: 18,
+                  color: VehicleUi.accentBlue,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Fuel Analytics',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Mở khóa dự đoán nhiên liệu bằng AI',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: VehicleUi.textMuted.withValues(alpha: 0.9),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        height: 1.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: () => PremiumBottomSheet.show(context),
+                style: FilledButton.styleFrom(
+                  backgroundColor: VehicleUi.accentBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                child: const Text(
+                  'Nâng cấp',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

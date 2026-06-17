@@ -1,4 +1,4 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +13,7 @@ import 'package:fuel_tracker_app/shared/providers/app_providers.dart';
 import 'package:fuel_tracker_app/shared/services/notification_service.dart';
 import 'package:fuel_tracker_app/shared/services/user_session_service.dart';
 import 'package:fuel_tracker_app/shared/widgets/iphone_17_pro_max_frame.dart';
+import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
 import 'package:fuel_tracker_app/shared/widgets/web_lan_debug_overlay.dart';
 
 Future<void> main() async {
@@ -58,32 +59,36 @@ class _ThemedAppRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final session = context.watch<UserSessionService>();
-
-    return MaterialApp(
-      title: 'Fuel Tracker Pro',
-      debugShowCheckedModeBanner: false,
-      themeMode: session.darkMode ? ThemeMode.dark : ThemeMode.light,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      builder: (context, child) {
-        Widget body = IPhone17ProMaxAppShell(
-          showInScreenChrome: false,
-          edgeToEdgeContent: true,
-          child: child,
+    // Chỉ rebuild MaterialApp khi đổi darkMode — tránh reset navigator khi login.
+    return Selector<UserSessionService, bool>(
+      selector: (_, session) => session.darkMode,
+      builder: (context, darkMode, _) {
+        return MaterialApp(
+          navigatorKey: ToastService.navigatorKey,
+          title: 'Fuel Tracker Pro',
+          debugShowCheckedModeBanner: false,
+          themeMode: darkMode ? ThemeMode.dark : ThemeMode.light,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          builder: (context, child) {
+            Widget body = IPhone17ProMaxAppShell(
+              edgeToEdgeContent: true,
+              child: child,
+            );
+            if (kDebugMode && kIsWeb && WebLanRuntime.hasInfo) {
+              body = Stack(
+                fit: StackFit.expand,
+                children: [
+                  body,
+                  const WebLanDebugOverlay(),
+                ],
+              );
+            }
+            return body;
+          },
+          home: const LauncherShell(),
         );
-        if (kDebugMode && kIsWeb && WebLanRuntime.hasInfo) {
-          body = Stack(
-            fit: StackFit.expand,
-            children: [
-              body,
-              const WebLanDebugOverlay(),
-            ],
-          );
-        }
-        return body;
       },
-      home: const LauncherShell(),
     );
   }
 }

@@ -16,7 +16,7 @@ enum IosStatusBarMode {
   live,
 }
 
-/// Status bar iOS 18 — giờ trái, island giữa, sóng/wifi/pin phải.
+/// Status bar iOS 26 — giờ trái, island giữa, sóng/wifi/pin phải.
 class IosStatusBar extends StatefulWidget {
   const IosStatusBar({
     super.key,

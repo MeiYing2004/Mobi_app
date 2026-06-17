@@ -1,4 +1,4 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fuel_tracker_app/features/home_ios/presentation/providers/launcher_state_provider.dart';
 
@@ -14,6 +14,11 @@ class HomeIndicatorController extends Notifier<double> {
 
   void registerDismissHandler(Future<void> Function() handler) {
     _dismissHandler = handler;
+  }
+
+  /// Đóng app đang mở (có animation) — gọi từ nút Back trong app con.
+  Future<void> requestDismiss() async {
+    await _dismissHandler?.call();
   }
 
   void updateDrag(double offset) {

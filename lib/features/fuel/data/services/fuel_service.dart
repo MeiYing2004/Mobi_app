@@ -1,6 +1,7 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:fuel_tracker_app/core/config/constants.dart';
+import 'package:fuel_tracker_app/features/auth/models/user_data_models.dart';
 import 'package:fuel_tracker_app/features/fuel/data/models/fuel_warning_event.dart';
 import 'package:fuel_tracker_app/features/fuel/data/services/gas_station_service.dart';
 import 'package:fuel_tracker_app/shared/services/notification_service.dart';
@@ -18,6 +19,9 @@ class FuelService extends ChangeNotifier {
   double _baseLPer100Km = AppConstants.defaultBaseLPer100Km;
 
   bool _hasShownWarning = false;
+  bool _persistEnabled = false;
+
+  void Function(UserFuelData data)? onFuelDataChanged;
 
   void Function(FuelWarningEvent event)? onLowFuelWarning;
 
@@ -77,6 +81,41 @@ class FuelService extends ChangeNotifier {
         remainingDistanceKm <= AppConstants.fuelWarningDistanceKm;
   }
 
+  /// Load fuel state từ user hiện tại.
+  void loadFromUserData(UserFuelData data, {bool persist = true}) {
+    _persistEnabled = false;
+    _tankCapacityLiters = data.tankCapacity.clamp(1, 200);
+    _currentFuelLiters = data.currentFuel.clamp(0, _tankCapacityLiters);
+    _baseLPer100Km = data.avgConsumption > 0
+        ? data.avgConsumption.clamp(2.0, 35.0)
+        : AppConstants.defaultBaseLPer100Km;
+    _hasShownWarning = false;
+    _persistEnabled = persist;
+    notifyListeners();
+  }
+
+  /// Xuất fuel state để lưu vào data.json.
+  UserFuelData exportUserData() => UserFuelData(
+        currentFuel: _currentFuelLiters,
+        tankCapacity: _tankCapacityLiters,
+        avgConsumption: _baseLPer100Km,
+      );
+
+  /// Reset khi logout — không ghi vào user.
+  void resetToDefaults() {
+    _persistEnabled = false;
+    _tankCapacityLiters = AppConstants.defaultTankCapacityLiters;
+    _currentFuelLiters = 12.0;
+    _baseLPer100Km = AppConstants.defaultBaseLPer100Km;
+    _hasShownWarning = false;
+    notifyListeners();
+  }
+
+  void _notifyFuelPersist() {
+    if (!_persistEnabled) return;
+    onFuelDataChanged?.call(exportUserData());
+  }
+
   /// Trừ nhiên liệu theo quãng đường GPS (mét).
   void consumeDistanceMeters(double meters) {
     if (meters <= 0 || _baseLPer100Km <= 0) return;
@@ -85,6 +124,7 @@ class FuelService extends ChangeNotifier {
         (_currentFuelLiters - liters).clamp(0.0, _tankCapacityLiters);
     _evaluateWarning();
     notifyListeners();
+    _notifyFuelPersist();
   }
 
   void updateTankCapacity(double value) {
@@ -94,12 +134,14 @@ class FuelService extends ChangeNotifier {
     }
     _evaluateWarning();
     notifyListeners();
+    _notifyFuelPersist();
   }
 
   void updateCurrentFuel(double value) {
     _currentFuelLiters = value.clamp(0, _tankCapacityLiters);
     _evaluateWarning();
     notifyListeners();
+    _notifyFuelPersist();
   }
 
   /// Demo đổ xăng (debug/profile) — 100% bình hoặc tối thiểu 5L.
@@ -111,12 +153,14 @@ class FuelService extends ChangeNotifier {
     _hasShownWarning = false;
     _evaluateWarning();
     notifyListeners();
+    _notifyFuelPersist();
   }
 
   void updateBaseConsumptionLPer100Km(double value) {
     _baseLPer100Km = value.clamp(2.0, 35.0);
     _evaluateWarning();
     notifyListeners();
+    _notifyFuelPersist();
   }
 
   void _evaluateWarning() {

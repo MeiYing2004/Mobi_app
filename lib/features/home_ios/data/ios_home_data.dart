@@ -1,4 +1,4 @@
-﻿import 'package:fuel_tracker_app/features/home_ios/data/ios_app_catalog.dart';
+import 'package:fuel_tracker_app/features/home_ios/data/ios_app_catalog.dart';
 import 'package:fuel_tracker_app/features/home_ios/data/ios_app_model.dart';
 import 'package:fuel_tracker_app/features/home_ios/data/ios_widget_size.dart';
 
@@ -43,6 +43,7 @@ class IosHomeData {
         [
           weatherWidget(size: IosWidgetSize.small),
           calendarWidget(size: IosWidgetSize.small),
+          IosAppCatalog.resolve(IosAppCatalog.group3DemoId),
           IosAppCatalog.resolve(fuelTrackerId),
           IosAppCatalog.resolve('maps'),
           IosAppCatalog.resolve('photos'),

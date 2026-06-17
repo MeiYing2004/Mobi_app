@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fuel_tracker_app/core/theme/app_spacing.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/providers/home_layout_provider.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_shell_insets.dart';
-import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_status_bar.dart';
-import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/shell_home_indicator.dart';
 
 /// Khung iOS cho màn Phân tích nhiên liệu — status bar + nội dung + home indicator.
 ///
@@ -11,21 +10,15 @@ import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/shell_ho
 class FuelIntelligenceShell extends StatelessWidget {
   const FuelIntelligenceShell({
     super.key,
-    required this.title,
     required this.onClose,
     required this.body,
   });
 
-  final String title;
   final VoidCallback onClose;
   final Widget body;
 
   @override
   Widget build(BuildContext context) {
-    final metrics = IosHomeMetrics.of(context);
-    // LauncherShell đã vẽ ShellHomeIndicator trên cùng — không nhân đôi.
-    final showOwnHomeIndicator = IosShellInsets.maybeOf(context) == null;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -34,48 +27,28 @@ class FuelIntelligenceShell extends StatelessWidget {
       ),
       child: Material(
         color: Colors.transparent,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFF0B0D12),
-                    Color(0xFF12151C),
-                    Color(0xFF0A0C10),
-                  ],
-                ),
-              ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF0B0D12),
+                Color(0xFF12151C),
+                Color(0xFF0A0C10),
+              ],
             ),
-            Column(
+          ),
+          child: SafeArea(
+            top: true,
+            bottom: false,
+            child: Column(
               children: [
-                IosStatusBar(
-                  metrics: metrics,
-                  isLight: Theme.of(context).brightness == Brightness.light,
-                ),
-                SizedBox(height: 10 * metrics.scale),
-                _FuelScreenHeader(title: title, onClose: onClose),
+                _FuelScreenHeader(onClose: onClose),
                 Expanded(child: body),
               ],
             ),
-            if (showOwnHomeIndicator)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: IgnorePointer(
-                  child: ShellHomeIndicator(
-                    screenWidth: metrics.screenWidth,
-                    bottomPadding: metrics.homeIndicatorBottomInset,
-                    pillWidth: metrics.homeIndicatorWidth,
-                    pillHeight: metrics.homeIndicatorHeight,
-                  ),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
@@ -84,36 +57,26 @@ class FuelIntelligenceShell extends StatelessWidget {
 
 class _FuelScreenHeader extends StatelessWidget {
   const _FuelScreenHeader({
-    required this.title,
-    required this.onClose,
+    this.onClose,
   });
 
-  final String title;
-  final VoidCallback onClose;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 0, 12, 4),
+      padding: const EdgeInsets.fromLTRB(4, 6, AppSpacing.medium, 6),
       child: Row(
         children: [
           IconButton(
-            onPressed: onClose,
+            onPressed: onClose ?? () => Navigator.maybePop(context),
             icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
-            color: Colors.white70,
+            color: onSurface.withValues(alpha: 0.7),
           ),
-          Expanded(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          const Expanded(child: SizedBox()),
           const SizedBox(width: 48),
         ],
       ),
@@ -167,7 +130,7 @@ class FuelIntelligenceEmptyState extends StatelessWidget {
         IosHomeMetrics.of(context).shellBottomInset;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24.0 + bottomInset),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

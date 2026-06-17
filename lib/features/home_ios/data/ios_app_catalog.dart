@@ -1,5 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
+import 'package:fuel_tracker_app/features/group3_demo/group3_food_demo_screen.dart';
 import 'package:fuel_tracker_app/core/vehicle_ui_tokens.dart';
 import 'package:fuel_tracker_app/features/home_ios/data/ios_app_model.dart';
 
@@ -8,12 +9,21 @@ class IosAppCatalog {
   IosAppCatalog._();
 
   static const fuelTrackerId = 'fuel_tracker';
+  static const group3DemoId = Group3FoodDemoScreen.appId;
 
   static final Map<String, IosAppModel> _byId = {
     for (final app in allApps) app.id: app,
   };
 
   static List<IosAppModel> get allApps => [
+        _app(
+          id: group3DemoId,
+          name: 'Food Demo',
+          category: 'Học tập',
+          gradient: [const Color(0xFFFF6B6B), const Color(0xFFFF9500)],
+          icon: Icons.restaurant_menu_rounded,
+          isGroup3Demo: true,
+        ),
         _app(
           id: fuelTrackerId,
           name: 'Fuel Tracker',
@@ -67,6 +77,7 @@ class IosAppCatalog {
     required List<Color> gradient,
     required IconData icon,
     bool isFuelTracker = false,
+    bool isGroup3Demo = false,
   }) {
     return IosAppModel(
       id: id,
@@ -75,6 +86,7 @@ class IosAppCatalog {
       iconGradient: gradient,
       iconData: icon,
       isFuelTracker: isFuelTracker,
+      isGroup3Demo: isGroup3Demo,
     );
   }
 }

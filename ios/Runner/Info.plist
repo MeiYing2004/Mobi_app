@@ -40,5 +40,7 @@
 	<!-- Google Maps iOS — thêm GMSServices API key trong AppDelegate -->
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Ứng dụng cần truy cập thư viện ảnh để chọn avatar.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Ứng dụng cần camera để chụp ảnh avatar.</string>
 </dict>
 </plist>

@@ -9,6 +9,7 @@ import 'package:fuel_tracker_app/core/vehicle_ui_tokens.dart';
 import 'package:fuel_tracker_app/features/geocoding/data/models/place_model.dart';
 import 'package:fuel_tracker_app/features/geocoding/data/services/nominatim_geocoding_service.dart';
 import 'package:fuel_tracker_app/features/geocoding/presentation/widgets/place_suggestions_panel.dart';
+import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
 
 /// Thanh tìm kiếm OSM — gợi ý Nominatim, chỉ đường qua [onNavigate].
 class MapSearchBar extends StatefulWidget {
@@ -242,8 +243,9 @@ class MapSearchBarState extends State<MapSearchBar> {
       await _commitNavigation(place, displayText: s.primaryText);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không chỉ đường: $e')),
+      AppToastService.error(
+        title: 'Không thể chỉ đường',
+        message: '$e',
       );
     } finally {
       _committing = false;

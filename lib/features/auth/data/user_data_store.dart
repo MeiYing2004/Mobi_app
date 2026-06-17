@@ -1,0 +1,141 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+
+import 'package:fuel_tracker_app/features/auth/models/user_model.dart';
+
+/// Đọc/ghi data.json — ưu tiên assets/data/data.json (debug) hoặc bản sao trong documents.
+class UserDataStore {
+  static const assetPath = 'assets/data/data.json';
+  static const projectRelativePath = 'assets/data/data.json';
+
+  File? _cachedFile;
+  UserDatabase _db = UserDatabase.empty();
+  bool _ready = false;
+
+  UserDatabase get database => _db;
+  bool get isReady => _ready;
+
+  /// Đường dẫn file JSON đang dùng (debug).
+  String? get activeFilePath => _cachedFile?.path;
+
+  Future<void> ensureReady() async {
+    if (_ready) return;
+    try {
+      final file = await _resolveWritableFile();
+      _cachedFile = file;
+      if (!await file.exists()) {
+        await _writeSeed(file);
+      }
+      await _loadFromFile(file);
+      _ready = true;
+    } catch (e, stack) {
+      debugPrint('[UserDataStore.ensureReady] $e');
+      debugPrint(stack.toString());
+      _db = UserDatabase.empty();
+      _ready = true;
+    }
+  }
+
+  Future<File> _resolveWritableFile() async {
+    // Chỉ dùng đường dẫn project trên desktop — mobile không ghi được assets/.
+    if (!kIsWeb && _isDesktopHost()) {
+      final projectFile = File(projectRelativePath);
+      if (kDebugMode) {
+        try {
+          final parent = projectFile.parent;
+          if (!await parent.exists()) {
+            await parent.create(recursive: true);
+          }
+          if (!await projectFile.exists()) {
+            await _writeSeed(projectFile);
+          }
+          return projectFile;
+        } catch (e) {
+          debugPrint('[UserDataStore] project path unavailable: $e');
+        }
+      }
+    }
+
+    final dir = await getApplicationDocumentsDirectory();
+    final dataDir = Directory('${dir.path}/assets/data');
+    if (!await dataDir.exists()) {
+      await dataDir.create(recursive: true);
+    }
+    return File('${dataDir.path}/data.json');
+  }
+
+  Future<void> _writeSeed(File file) async {
+    try {
+      final seed = await rootBundle.loadString(assetPath);
+      await file.writeAsString(_prettyJson(seed));
+    } catch (_) {
+      final empty = UserDatabase.empty();
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(empty.toJson()),
+      );
+    }
+  }
+
+  bool _isDesktopHost() {
+    if (kIsWeb) return false;
+    return Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+  }
+
+  String _prettyJson(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      return const JsonEncoder.withIndent('  ').convert(decoded);
+    } catch (e) {
+      debugPrint('[UserDataStore] prettyJson failed: $e');
+      return raw;
+    }
+  }
+
+  Future<void> _loadFromFile(File file) async {
+    try {
+      final content = await file.readAsString();
+      if (content.trim().isEmpty) {
+        _db = UserDatabase.empty();
+        return;
+      }
+      final map = jsonDecode(content) as Map<String, dynamic>;
+      _db = UserDatabase.fromJson(map);
+    } catch (e, stack) {
+      debugPrint('[UserDataStore] JSON parse/read error: $e');
+      debugPrint(stack.toString());
+      _db = UserDatabase.empty();
+      try {
+        await file.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(_db.toJson()),
+        );
+      } catch (writeErr) {
+        debugPrint('[UserDataStore] failed to rewrite defaults: $writeErr');
+      }
+    }
+  }
+
+  Future<void> save() async {
+    final file = _cachedFile ?? await _resolveWritableFile();
+    _cachedFile = file;
+    final parent = file.parent;
+    if (!await parent.exists()) {
+      await parent.create(recursive: true);
+    }
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(_db.toJson()),
+    );
+    debugPrint('[UserDataStore] saved → ${file.path}');
+  }
+
+  Future<void> reload() async {
+    final file = _cachedFile;
+    if (file == null || !await file.exists()) return;
+    await _loadFromFile(file);
+  }
+
+  void replaceDatabase(UserDatabase db) => _db = db;
+}

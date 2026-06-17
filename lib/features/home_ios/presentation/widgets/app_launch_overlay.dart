@@ -1,12 +1,14 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import 'package:fuel_tracker_app/core/theme/app_colors.dart';
 import 'package:fuel_tracker_app/features/home_ios/core/ios_haptics.dart';
 import 'package:fuel_tracker_app/features/home_ios/core/ios_spring.dart';
 import 'package:fuel_tracker_app/features/home_ios/core/ios_visual_tokens.dart';
 import 'package:fuel_tracker_app/features/home_ios/data/ios_app_model.dart';
+import 'package:fuel_tracker_app/features/group3_demo/group3_food_demo_screen.dart';
 import 'package:fuel_tracker_app/shared/screens/home_screen.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_app_icons.dart';
 
@@ -104,7 +106,11 @@ class AppLaunchOverlayState extends State<AppLaunchOverlay>
 
     return AnimatedBuilder(
       animation: _progress,
-      child: const RepaintBoundary(child: _FuelTrackerAppHost()),
+      child: RepaintBoundary(
+        child: widget.app.isGroup3Demo
+            ? const _Group3DemoAppHost()
+            : const _FuelTrackerAppHost(),
+      ),
       builder: (context, appChild) {
         final rect = _currentRect(screen);
         final drag = (widget.dragOffset / screen.height).clamp(0.0, 0.38);
@@ -117,6 +123,12 @@ class AppLaunchOverlayState extends State<AppLaunchOverlay>
           child: Stack(
             fit: StackFit.expand,
             children: [
+              if (_t > 0.02)
+                Positioned.fill(
+                  child: ColoredBox(
+                    color: Colors.black.withValues(alpha: (0.42 * _t).clamp(0.0, 0.42)),
+                  ),
+                ),
               Positioned(
                 left: rect.left,
                 top: top,
@@ -168,11 +180,71 @@ class AppLaunchOverlayState extends State<AppLaunchOverlay>
   }
 }
 
+class _Group3DemoAppHost extends StatelessWidget {
+  const _Group3DemoAppHost();
+
+  @override
+  Widget build(BuildContext context) {
+    // Navigator riêng — Drawer / Sheet không tràn lên Home iOS bên dưới.
+    return const ColoredBox(
+      color: AppColors.background,
+      child: _Group3DemoNavigator(),
+    );
+  }
+}
+
+class _Group3DemoNavigator extends StatefulWidget {
+  const _Group3DemoNavigator();
+
+  @override
+  State<_Group3DemoNavigator> createState() => _Group3DemoNavigatorState();
+}
+
+class _Group3DemoNavigatorState extends State<_Group3DemoNavigator> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: _navigatorKey,
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const Group3FoodDemoScreen(),
+      ),
+    );
+  }
+}
+
 class _FuelTrackerAppHost extends StatelessWidget {
   const _FuelTrackerAppHost();
 
   @override
   Widget build(BuildContext context) {
-    return const HomeScreen(inLauncherMode: true);
+    return const ColoredBox(
+      color: AppColors.backgroundDark,
+      child: _FuelTrackerNavigator(),
+    );
+  }
+}
+
+class _FuelTrackerNavigator extends StatefulWidget {
+  const _FuelTrackerNavigator();
+
+  @override
+  State<_FuelTrackerNavigator> createState() => _FuelTrackerNavigatorState();
+}
+
+class _FuelTrackerNavigatorState extends State<_FuelTrackerNavigator> {
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: _navigatorKey,
+      onGenerateRoute: (settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const HomeScreen(inLauncherMode: true),
+      ),
+    );
   }
 }

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Hằng số thị giác iOS 18 — chuẩn iPhone 15 Pro (393×852 pt).
+/// Hằng số thị giác iOS 26 — chuẩn iPhone 17 Pro Max (430×932 pt).
 abstract final class IosVisualTokens {
-  static const double referenceWidth = 393;
-  static const double referenceHeight = 852;
+  static const double referenceWidth = 430;
+  static const double referenceHeight = 932;
 
   static double scaleW(double width) => width / referenceWidth;
   static double scaleH(double height) => height / referenceHeight;
 
-  // Springboard grid (pt @ 393).
+  // Springboard grid (pt @ 430).
   static const double iconSize = 60;
   static const double columnSpacing = 20;
   static const double horizontalPadding = 46.5;
@@ -18,10 +18,13 @@ abstract final class IosVisualTokens {
   static const double rowPitch = 110;
   static const double widgetToIconGap = 22;
 
-  // Dynamic Island — rộng giảm 8%, cao 32 pt.
-  static const double islandWidth = 116;
-  static const double islandHeight = 32;
-  static const double islandTop = 6;
+  // Dynamic Island thế hệ mới — pill giữa màn hình.
+  static const double islandWidth = 126;
+  static const double islandHeight = 37;
+  static const double islandTop = 11;
+
+  /// Khoảng thở dưới status bar + island (pt @ 430).
+  static const double shellBreathingSpace = 20;
 
   // Dock.
   static const double dockHeight = 80;

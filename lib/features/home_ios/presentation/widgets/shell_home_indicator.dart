@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:fuel_tracker_app/features/home_ios/presentation/providers/home_indicator_controller.dart';
@@ -53,12 +53,15 @@ class _ShellHomeIndicatorState extends ConsumerState<ShellHomeIndicator> {
         isAppOpen ? ref.watch(homeIndicatorDragProvider) : 0.0;
     final pillW = widget.pillWidth ?? widget.screenWidth * 0.36;
     final pillH = widget.pillHeight ?? 5.0;
+    final zoneHeight = isAppOpen
+        ? ShellHomeIndicator.hitHeight
+        : pillH + widget.bottomPadding + 4;
 
     return Padding(
       padding: EdgeInsets.only(bottom: widget.bottomPadding),
       child: SizedBox(
         width: widget.screenWidth,
-        height: ShellHomeIndicator.hitHeight,
+        height: zoneHeight,
         child: Align(
           alignment: Alignment.bottomCenter,
           child: isAppOpen

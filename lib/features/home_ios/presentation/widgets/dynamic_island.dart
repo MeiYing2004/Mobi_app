@@ -159,32 +159,50 @@ class _DynamicIslandBody extends StatelessWidget {
       width: width,
       height: height,
       builder: (context, w, h) {
-        return Container(
-          width: w,
-          height: h,
+        return DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.black,
             borderRadius: BorderRadius.circular(h / 2),
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFF1A1A1C),
+                Color(0xFF000000),
+              ],
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.07),
+              width: 0.65,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: h * 0.18,
-                offset: Offset(0, h * 0.06),
+                color: Colors.black.withValues(alpha: 0.38),
+                blurRadius: h * 0.24,
+                offset: Offset(0, h * 0.07),
+              ),
+              BoxShadow(
+                color: Colors.white.withValues(alpha: 0.05),
+                blurRadius: h * 0.14,
+                offset: Offset(0, -h * 0.03),
               ),
             ],
           ),
-          padding: EdgeInsets.symmetric(horizontal: w * 0.07),
-          child: expanded
-              ? _ExpandedContent(
-                  mode: mode,
-                  fuel: fuel,
-                  bridge: bridge,
-                  location: location,
-                  height: h,
-                )
-              : compact
-                  ? _CompactIslandSensors(width: w, height: h)
-                  : null,
+          child: Container(
+            width: w,
+            height: h,
+            padding: EdgeInsets.symmetric(horizontal: w * 0.07),
+            child: expanded
+                ? _ExpandedContent(
+                    mode: mode,
+                    fuel: fuel,
+                    bridge: bridge,
+                    location: location,
+                    height: h,
+                  )
+                : compact
+                    ? _CompactIslandSensors(width: w, height: h)
+                    : null,
+          ),
         );
       },
     );

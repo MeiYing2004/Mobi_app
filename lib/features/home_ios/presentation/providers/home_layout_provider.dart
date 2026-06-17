@@ -112,7 +112,7 @@ final homePageItemsProvider =
   );
 });
 
-/// Kích thước responsive — scale từ iPhone 15 Pro 393×852 pt.
+/// Kích thước responsive — scale từ iPhone 17 Pro Max 430×932 pt.
 class IosHomeMetrics {
   const IosHomeMetrics({
     required this.screenWidth,
@@ -197,6 +197,13 @@ class IosHomeMetrics {
 
   double get iconCellHeight => iconSize + iconLabelGap + labelLineHeight;
 
+  /// Vùng cố định phía dưới — Dock + khoảng cách tới Home Indicator.
+  double get dockZoneHeight => dockBottomPadding + dockHeight;
+
+  /// Khoảng cách nội dung cuộn tới mép trên Dock (gồm page dots).
+  double get contentBottomClearance =>
+      dockZoneHeight + IosVisualTokens.pageDotsAboveDock * scale + 24 * scale;
+
   double widgetHeight(IosWidgetSize size) =>
       iconCellHeight * size.rowSpan + rowSpacing * (size.rowSpan - 1);
 
@@ -237,7 +244,11 @@ class IosHomeMetrics {
     final statusSideInset = 16 * s;
     final statusContentTop = islandTop + islandH * 0.48 - 8.5 * s;
 
-    final shellTop = statusBarTotal + 12 * s;
+    // Mock (topPadding=0): chừa đủ chỗ cho chrome giả.
+    // Thiết bị thật: chỉ cộng thêm khoảng thở — safe area hệ thống đã gồm island.
+    final shellTop = topPadding > 0
+        ? topPadding + IosVisualTokens.shellBreathingSpace * s
+        : statusBarTotal + IosVisualTokens.shellBreathingSpace * s;
 
     final homeIndicatorW = IosVisualTokens.homeIndicatorWidth * s;
     final homeIndicatorH = IosVisualTokens.homeIndicatorHeight * s;
@@ -249,6 +260,9 @@ class IosHomeMetrics {
     final widgetCornerR = IosVisualTokens.widgetCornerRadius * s;
 
     final pageDotsBottom = dockBottom + dockH + IosVisualTokens.pageDotsAboveDock * s;
+    final dockZone = dockBottom + dockH;
+    final contentBottomClearance =
+        dockZone + IosVisualTokens.pageDotsAboveDock * s + 24 * s;
 
     return IosHomeMetrics(
       screenWidth: screenWidth,
@@ -285,8 +299,10 @@ class IosHomeMetrics {
       pageDotsBottomOffset: pageDotsBottom,
       homeIndicatorBottomInset: homeIndicatorBottom,
       shellTopInset: shellTop,
-      shellBottomInset: homeIndicatorBottom + homeIndicatorH + 28 * s,
-      pageScrollBottomPadding: pageDotsBottom + 28 * s,
+      shellBottomInset: bottomPadding > 0
+          ? bottomPadding + 12 * s
+          : homeIndicatorBottom + homeIndicatorH + 28 * s,
+      pageScrollBottomPadding: contentBottomClearance,
     );
   }
 }

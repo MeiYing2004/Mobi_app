@@ -15,16 +15,7 @@ class AppRuntimeGuard {
 
     ErrorWidget.builder = (FlutterErrorDetails details) {
       _log('ErrorWidget', details.exception, details.stack);
-      return const ColoredBox(
-        color: Color(0xFF101014),
-        child: Center(
-          child: Text(
-            'Đã xảy ra lỗi hiển thị. Vui lòng khởi động lại ứng dụng.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70),
-          ),
-        ),
-      );
+      return _AppErrorFallback(details: details);
     };
 
     PlatformDispatcher.instance.onError = (error, stack) {
@@ -43,5 +34,65 @@ class AppRuntimeGuard {
     if (stack != null) {
       debugPrint(stack.toString());
     }
+  }
+}
+
+class _AppErrorFallback extends StatelessWidget {
+  const _AppErrorFallback({required this.details});
+
+  final FlutterErrorDetails details;
+
+  @override
+  Widget build(BuildContext context) {
+    final message = kDebugMode
+        ? details.exceptionAsString()
+        : 'Đã xảy ra lỗi hiển thị.';
+
+    return Material(
+      color: const Color(0xFF0D0D12),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: Colors.red.shade300,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Đã xảy ra lỗi',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                maxLines: kDebugMode ? 8 : 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Ứng dụng vẫn chạy — thử quay lại hoặc khởi động lại.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

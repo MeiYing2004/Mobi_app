@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'package:fuel_tracker_app/features/home_ios/data/ios_widget_size.dart';
 
@@ -20,6 +20,7 @@ class IosAppModel {
     this.iconData,
     this.iconColor,
     this.isFuelTracker = false,
+    this.isGroup3Demo = false,
     this.widgetSize,
     this.widgetKind,
   });
@@ -33,8 +34,12 @@ class IosAppModel {
   final IconData? iconData;
   final Color? iconColor;
   final bool isFuelTracker;
+  final bool isGroup3Demo;
   final IosWidgetSize? widgetSize;
   final IosWidgetKind? widgetKind;
+
+  /// App có màn thật — mở qua AppLaunchOverlay (Fuel Tracker, Food Demo…).
+  bool get isLaunchable => isFuelTracker || isGroup3Demo;
 
   IosAppModel copyWith({
     String? id,
@@ -46,6 +51,7 @@ class IosAppModel {
     IconData? iconData,
     Color? iconColor,
     bool? isFuelTracker,
+    bool? isGroup3Demo,
     IosWidgetSize? widgetSize,
     IosWidgetKind? widgetKind,
   }) {
@@ -59,6 +65,7 @@ class IosAppModel {
       iconData: iconData ?? this.iconData,
       iconColor: iconColor ?? this.iconColor,
       isFuelTracker: isFuelTracker ?? this.isFuelTracker,
+      isGroup3Demo: isGroup3Demo ?? this.isGroup3Demo,
       widgetSize: widgetSize ?? this.widgetSize,
       widgetKind: widgetKind ?? this.widgetKind,
     );

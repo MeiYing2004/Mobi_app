@@ -1,4 +1,4 @@
-﻿import 'dart:ui';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -91,6 +91,7 @@ class IosGlassPanel extends StatelessWidget {
     Widget panel = RepaintBoundary(
       child: ClipRRect(
         borderRadius: radius,
+        clipBehavior: Clip.hardEdge,
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
           child: DecoratedBox(
@@ -161,22 +162,26 @@ class IosGlassHighlight extends StatelessWidget {
     required this.child,
     this.borderRadius,
     this.subtle = false,
+    this.clipContent = false,
   });
 
   final Widget child;
   final BorderRadius? borderRadius;
   final bool subtle;
+  final bool clipContent;
 
   @override
   Widget build(BuildContext context) {
+    final radius = borderRadius ?? BorderRadius.circular(999);
     return Stack(
-      clipBehavior: Clip.none,
+      clipBehavior: clipContent ? Clip.hardEdge : Clip.none,
       children: [
         child,
         Positioned.fill(
           child: IgnorePointer(
             child: ClipRRect(
-              borderRadius: borderRadius ?? BorderRadius.circular(999),
+              borderRadius: radius,
+              clipBehavior: Clip.hardEdge,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

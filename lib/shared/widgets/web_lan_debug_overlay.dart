@@ -1,8 +1,9 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:fuel_tracker_app/core/web_lan_runtime.dart';
+import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
 
 /// Debug overlay: Local / LAN URL and active port (Web + debug only).
 class WebLanDebugOverlay extends StatefulWidget {
@@ -124,8 +125,10 @@ class _WebLanDebugOverlayState extends State<WebLanDebugOverlay> {
       label: Text(label, style: const TextStyle(fontSize: 12)),
       onPressed: () {
         Clipboard.setData(ClipboardData(text: text));
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('LAN URL copied'), duration: Duration(seconds: 2)),
+        AppToastService.info(
+          title: 'Đã sao chép',
+          message: 'LAN URL copied',
+          duration: const Duration(seconds: 2),
         );
       },
     );

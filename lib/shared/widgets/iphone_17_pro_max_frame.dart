@@ -8,6 +8,16 @@ import 'package:fuel_tracker_app/features/home_ios/presentation/providers/home_l
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_status_bar.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/shell_home_indicator.dart';
 
+/// Chỉ bật chrome giả (Status Bar / Dynamic Island / Home Indicator) trên preview mock.
+abstract final class IPhone17MockDevice {
+  static bool get isActive {
+    if (kIsWeb) return true;
+    return defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS;
+  }
+}
+
 /// Màu khung iPhone 17 Pro Max.
 enum IPhone17FrameColor {
   titaniumBlack,
@@ -94,17 +104,13 @@ class IPhone17ProMaxFrame extends StatelessWidget {
 class IPhone17ProMaxGeometry {
   IPhone17ProMaxGeometry._();
 
-  static const double logicalWidth = 1290;
-  static const double logicalHeight = 2796;
+  static const double logicalWidth = IosDesign.phoneWidth;
+  static const double logicalHeight = IosDesign.phoneHeight;
 
-  // Tuned to iPhone 15 Pro-like proportions (thin bezels, rounder corners).
-  // Thinner frame for iPhone 15 Pro Max-like screen dominance.
-  static const double bezelRatio = 0.023;
-  static const double outerRadiusRatio = 0.152;
-  static const double screenRadiusRatio = 0.132;
-  static const double islandWidthRatio = 0.34;
-  static const double islandHeightRatio = 0.026;
-  static const double islandTopRatio = 0.015;
+  // iPhone 17 Pro Max — viền titanium mỏng, bo góc lớn, màn edge-to-edge.
+  static const double bezelRatio = 0.019;
+  static const double outerRadiusRatio = 0.158;
+  static const double screenRadiusRatio = 0.138;
 }
 
 class _PhoneLayout {
@@ -611,7 +617,10 @@ class _PhoneBody extends StatelessWidget {
                         bottom: 0,
                         child: ShellHomeIndicator(
                           screenWidth: layout.screenWidth,
-                          bottomPadding: 8,
+                          bottomPadding: IosHomeMetrics.forScreen(
+                            screenWidth: layout.screenWidth,
+                            screenHeight: layout.screenHeight,
+                          ).homeIndicatorBottomInset,
                         ),
                       ),
                       Positioned(
@@ -623,8 +632,6 @@ class _PhoneBody extends StatelessWidget {
                             metrics: IosHomeMetrics.forScreen(
                               screenWidth: layout.screenWidth,
                               screenHeight: layout.screenHeight,
-                              topPadding: layout.screenHeight *
-                                  IPhone17ProMaxGeometry.islandTopRatio,
                             ),
                             isLight: isLight,
                             showIsland: showDynamicIsland,
@@ -1013,38 +1020,36 @@ class _PhysicalButton extends StatelessWidget {
   }
 }
 
-/// Bọc [MaterialApp] — Shell iPhone 17 Pro Max (StatusBar, Dynamic Island, Home Indicator).
+/// Bọc [MaterialApp] — Shell iPhone 17 Pro Max (chỉ mock preview).
+///
+/// Trên Android/iOS thật: không khung, không Status Bar / Island / Home Indicator giả.
 class IPhone17ProMaxAppShell extends StatelessWidget {
   const IPhone17ProMaxAppShell({
     super.key,
     required this.child,
     this.frameColor = IPhone17FrameColor.titaniumBlack,
     this.enabled,
-    this.showInScreenChrome = false,
     this.edgeToEdgeContent = true,
   });
 
   final Widget? child;
   final IPhone17FrameColor frameColor;
   final bool? enabled;
-  final bool showInScreenChrome;
   final bool edgeToEdgeContent;
 
   bool get _shouldShowFrame {
     if (enabled != null) return enabled!;
-    if (kIsWeb) return true;
-    return defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux ||
-        defaultTargetPlatform == TargetPlatform.macOS;
+    return IPhone17MockDevice.isActive;
   }
 
   @override
   Widget build(BuildContext context) {
+    final frameEnabled = _shouldShowFrame;
     return IPhone17ProMaxFrame(
-      enabled: _shouldShowFrame,
+      enabled: frameEnabled,
       frameColor: frameColor,
-      showDynamicIsland: showInScreenChrome,
-      showInScreenChrome: showInScreenChrome,
+      showDynamicIsland: frameEnabled,
+      showInScreenChrome: frameEnabled,
       edgeToEdgeContent: edgeToEdgeContent,
       child: child ?? const SizedBox.shrink(),
     );

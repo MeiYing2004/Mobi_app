@@ -43,12 +43,18 @@ import 'package:fuel_tracker_app/shared/widgets/ios_style_widgets.dart';
 import 'package:fuel_tracker_app/features/map/presentation/widgets/map_panel.dart';
 import 'package:fuel_tracker_app/features/geocoding/presentation/widgets/map_search_bar.dart';
 import 'package:fuel_tracker_app/features/navigation/presentation/widgets/navigation_hud.dart';
+import 'package:fuel_tracker_app/features/premium/premium_manager.dart';
+import 'package:fuel_tracker_app/features/premium/widgets/premium_guard.dart';
 import 'package:fuel_tracker_app/features/shell/widgets/shell_bottom_nav.dart';
 import 'package:fuel_tracker_app/shared/widgets/vehicle_dashboard_panel.dart';
 import 'package:fuel_tracker_app/shared/widgets/cinematic_sheet.dart';
 import 'package:fuel_tracker_app/features/fuel/presentation/screens/fuel_intelligence_screen.dart';
 import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_shell_insets.dart';
 import 'package:fuel_tracker_app/shared/screens/profile_settings_sheet.dart';
+import 'package:fuel_tracker_app/shared/widgets/account_drawer/account_drawer.dart';
+import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
+import 'package:fuel_tracker_app/core/theme/luxury_tokens.dart';
+import 'package:fuel_tracker_app/core/theme/luxury_widgets.dart';
 
 /// Shell điều phối bản đồ OSM — tìm kiếm Nominatim, chỉ đường OSRM, trạm xăng Overpass.
 class HomeShell extends StatefulWidget {
@@ -63,6 +69,7 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final AnimatedMapController _animatedMapController =
       AnimatedMapController(vsync: this);
   MapController get _mapController => _animatedMapController.mapController;
@@ -584,8 +591,9 @@ class _HomeShellState extends State<HomeShell>
     final station = _resolveNearestRefuelStation(route);
     if (station == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không tìm thấy trạm xăng gần bạn')),
+      AppToastService.warning(
+        title: 'Không tìm thấy trạm',
+        message: 'Không tìm thấy trạm xăng gần bạn',
       );
       return;
     }
@@ -673,8 +681,9 @@ class _HomeShellState extends State<HomeShell>
       if (!_navigationSessionValid(session)) return;
       _setNavigationLoadingForSession(session, false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không tính được tuyến tiếp: $e')),
+      AppToastService.error(
+        title: 'Không tính được tuyến',
+        message: '$e',
       );
     }
   }
@@ -861,13 +870,9 @@ class _HomeShellState extends State<HomeShell>
 
   void _onLowFuelWarning(FuelWarningEvent event) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: IosDesign.warningRed.withValues(alpha: 0.92),
-        content: Text(event.message),
-        margin: const EdgeInsets.fromLTRB(20, 0, 20, 120),
-      ),
+    AppToastService.warning(
+      title: event.title,
+      message: event.message,
     );
     showIosWarningDialog(context, title: event.title, message: event.message);
   }
@@ -1173,11 +1178,10 @@ class _HomeShellState extends State<HomeShell>
 
   void _showRouteError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 4),
-      ),
+    AppToastService.error(
+      title: 'Lỗi điều hướng',
+      message: message,
+      duration: const Duration(seconds: 4),
     );
   }
 
@@ -1185,12 +1189,11 @@ class _HomeShellState extends State<HomeShell>
     if (!mounted || snapMeters == null) return;
     final msg = RouteSnapWarning.messageForSnapMeters(snapMeters);
     if (msg == null) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        duration: Duration(
-          seconds: RouteSnapWarning.isStrongWarning(snapMeters) ? 5 : 3,
-        ),
+    AppToastService.warning(
+      title: 'Cảnh báo định vị',
+      message: msg,
+      duration: Duration(
+        seconds: RouteSnapWarning.isStrongWarning(snapMeters) ? 5 : 3,
       ),
     );
   }
@@ -1566,6 +1569,24 @@ class _HomeShellState extends State<HomeShell>
     });
   }
 
+  void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
+
+  void _closeDrawer() {
+    final scaffold = _scaffoldKey.currentState;
+    if (scaffold?.isDrawerOpen ?? false) {
+      scaffold!.closeDrawer();
+    }
+  }
+
+  Future<void> _onDrawerItem(String id) async {
+    await AccountDrawerActions.handle(
+      context,
+      itemId: id,
+      closeDrawer: _closeDrawer,
+      onHome: () {},
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = context.watch<LocationService>();
@@ -1627,12 +1648,29 @@ class _HomeShellState extends State<HomeShell>
         systemNavigationBarColor: Colors.transparent,
       ),
       child: Scaffold(
+        key: _scaffoldKey,
+        drawerEnableOpenDragGesture: true,
+        drawerScrimColor: Colors.black.withValues(alpha: 0.45),
+        onDrawerChanged: (open) {
+          if (open) {
+            _interactionController.openSheet();
+          } else {
+            _interactionController.collapseSheet();
+          }
+        },
+        drawer: Drawer(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          width: MediaQuery.sizeOf(context).width,
+          child: AccountDrawer(onItemSelected: _onDrawerItem),
+        ),
         backgroundColor: VehicleUi.surfaceDark,
         body: Stack(
         fit: StackFit.expand,
         clipBehavior: Clip.none,
         children: [
-          MapPanel(
+          MapParallaxShell(
+            child: MapPanel(
             mapController: _mapController,
             locationService: loc,
             mapTarget: mapTarget,
@@ -1658,6 +1696,7 @@ class _HomeShellState extends State<HomeShell>
               _interactionController.focusMap();
             },
             onStationTap: _openStationSheet,
+          ),
           ),
           // Cinematic focus layer: map dims + haze when sheets are active.
           IgnorePointer(
@@ -1713,10 +1752,9 @@ class _HomeShellState extends State<HomeShell>
                   if (_stations.isNotEmpty) {
                     _startNavigation(_stations.first);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Chưa có cây xăng gần bạn'),
-                      ),
+                    AppToastService.info(
+                      title: 'Thông tin',
+                      message: 'Chưa có cây xăng gần bạn',
                     );
                   }
                 },
@@ -1753,9 +1791,14 @@ class _HomeShellState extends State<HomeShell>
                         child: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            VehicleDashboardPanel(
-                              fuel: fuel,
-                              lowFuel: low,
+                            PremiumGuard(
+                              feature: PremiumFeature.remainingRange,
+                              lockedPreview:
+                                  const _LockedFuelDashboardPreview(),
+                              child: VehicleDashboardPanel(
+                                fuel: fuel,
+                                lowFuel: low,
+                              ),
                             ),
                             Positioned(
                               top: 8,
@@ -1913,6 +1956,8 @@ class _HomeShellState extends State<HomeShell>
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          _HamburgerButton(onTap: _openDrawer),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: MapSearchBar(
                               searchService: _mapNavigation.geocoding,
@@ -1977,6 +2022,58 @@ class _HomeShellState extends State<HomeShell>
     _interactionController.dispose();
     _motionDirector.dispose();
     super.dispose();
+  }
+}
+
+/// Nút hamburger — góc trên trái, glass style.
+class _HamburgerButton extends StatefulWidget {
+  const _HamburgerButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  State<_HamburgerButton> createState() => _HamburgerButtonState();
+}
+
+class _HamburgerButtonState extends State<_HamburgerButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _pressed ? MicroMotionSpec.pressedScale : 1,
+        duration: MicroMotionSpec.fast,
+        curve: MicroMotionSpec.emphasisCurve,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                VehicleUi.card.withValues(alpha: 0.95),
+                LuxuryTokens.backgroundElevated.withValues(alpha: 0.9),
+              ],
+            ),
+            border: Border.all(color: LuxuryTokens.glassBorderBright),
+            boxShadow: LuxuryTokens.elevation(2, glow: LuxuryTokens.neonBlue),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(
+            Icons.menu_rounded,
+            color: LuxuryTokens.neonBlue,
+            size: 22,
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2175,6 +2272,78 @@ class _DashboardCollapsedButtonState extends State<_DashboardCollapsedButton> {
             Icons.tune_rounded,
             color: VehicleUi.accentBlue,
             size: 22,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LockedFuelDashboardPreview extends StatelessWidget {
+  const _LockedFuelDashboardPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(LuxuryTokens.radiusLg),
+      child: SizedBox.expand(
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.25),
+            borderRadius: BorderRadius.circular(LuxuryTokens.radiusLg),
+            border: Border.all(
+              color: LuxuryTokens.neonBlue.withValues(alpha: 0.35),
+              width: 1.2,
+            ),
+            boxShadow: LuxuryTokens.elevation(2, glow: LuxuryTokens.neonBlue),
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: LuxuryTokens.neonBlue.withValues(alpha: 0.16),
+                      border: Border.all(
+                        color: LuxuryTokens.neonCyan.withValues(alpha: 0.45),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.lock_rounded,
+                      size: 22,
+                      color: LuxuryTokens.neonCyan,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Chỉ dành cho Premium',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Nâng cấp để xem quãng đường còn lại & hiệu suất.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: VehicleUi.textSecondary.withValues(alpha: 0.9),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

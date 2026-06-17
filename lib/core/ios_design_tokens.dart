@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:fuel_tracker_app/core/theme/app_colors.dart';
+
 /// Design tokens — iPhone 17 Pro Max (logical ~430×932) + Apple premium palette.
 class IosDesign {
   IosDesign._();
@@ -12,9 +14,9 @@ class IosDesign {
   static const Color titanGray = Color(0xFF2C2C2E);
   static const Color titanGrayLight = Color(0xFF3A3A3C);
   // Replace aggressive neon with calm "electric blue" used for highlights only.
-  static const Color neonCyan = Color(0xFF3B7DDF);
+  static const Color neonCyan = AppColors.primaryDark;
   static const Color neonCyanDim = Color(0x663B7DDF);
-  static const Color warningRed = Color(0xFFE85A4E);
+  static const Color warningRed = AppColors.errorDark;
   static const Color warningRedGlow = Color(0x33E85A4E);
 
   static const double radiusXL = 28;

@@ -10,10 +10,10 @@ abstract final class IosTypography {
           defaultTargetPlatform == TargetPlatform.macOS);
 
   static String? get displayFamily =>
-      _useSystemSf ? '.SF Pro Display' : GoogleFonts.inter().fontFamily;
+      _useSystemSf ? '.SF Pro Display' : GoogleFonts.poppins().fontFamily;
 
   static String? get textFamily =>
-      _useSystemSf ? '.SF Pro Text' : GoogleFonts.inter().fontFamily;
+      _useSystemSf ? '.SF Pro Text' : GoogleFonts.openSans().fontFamily;
 
   static TextStyle _finalize(TextStyle style) => style.copyWith(
         inherit: false,
@@ -40,7 +40,7 @@ abstract final class IosTypography {
         height: height,
       ));
     }
-    return _finalize(GoogleFonts.inter(
+    return _finalize(GoogleFonts.poppins(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,
@@ -68,7 +68,7 @@ abstract final class IosTypography {
         shadows: shadows,
       ));
     }
-    return _finalize(GoogleFonts.inter(
+    return _finalize(GoogleFonts.openSans(
       fontSize: fontSize,
       fontWeight: fontWeight,
       color: color,

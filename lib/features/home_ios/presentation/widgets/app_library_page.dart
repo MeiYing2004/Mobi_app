@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import 'package:fuel_tracker_app/features/home_ios/data/ios_app_catalog.dart';
@@ -29,7 +29,7 @@ class AppLibraryPage extends StatelessWidget {
           metrics.horizontalPadding,
           metrics.screenHeight * 0.01,
           metrics.horizontalPadding,
-          metrics.dockHeight + metrics.dockBottomPadding + 32,
+          metrics.contentBottomClearance - metrics.dockZoneHeight,
         ),
         physics: const BouncingScrollPhysics(),
         children: [
@@ -89,24 +89,29 @@ class _CategorySection extends StatelessWidget {
             ),
           ),
           SizedBox(height: metrics.gridSpacing),
-          Wrap(
-            spacing: metrics.gridSpacing,
-            runSpacing: metrics.gridSpacing * 1.1,
-            children: apps.map((app) {
-              return SizedBox(
-                width: metrics.iconCellWidth,
-                child: Builder(
-                  builder: (iconContext) {
-                    return AppIcon(
-                      app: app,
-                      metrics: metrics,
-                      showLabel: true,
-                      onTap: () => onAppTap(app, iconContext),
-                    );
-                  },
-                ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: metrics.columns,
+              crossAxisSpacing: metrics.gridSpacing,
+              mainAxisSpacing: metrics.gridSpacing * 1.1,
+              mainAxisExtent: metrics.iconCellHeight,
+            ),
+            itemCount: apps.length,
+            itemBuilder: (context, index) {
+              final app = apps[index];
+              return Builder(
+                builder: (iconContext) {
+                  return AppIcon(
+                    app: app,
+                    metrics: metrics,
+                    showLabel: true,
+                    onTap: () => onAppTap(app, iconContext),
+                  );
+                },
               );
-            }).toList(),
+            },
           ),
         ],
       ),

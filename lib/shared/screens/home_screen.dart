@@ -11,6 +11,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('HOME_SCREEN_BUILD');
     return HomeShell(inLauncherMode: inLauncherMode);
   }
 }
