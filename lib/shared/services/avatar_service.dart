@@ -93,9 +93,9 @@ abstract final class AvatarService {
   }
 
   static Future<bool> _ensurePermission(
-    ImageSource source,
-    BuildContext context,
-  ) async {
+      ImageSource source,
+      BuildContext context,
+      ) async {
     if (source == ImageSource.camera) {
       return _requestPermission(context, Permission.camera, 'Camera');
     }
@@ -113,7 +113,7 @@ abstract final class AvatarService {
           context,
           title: 'Cần quyền truy cập ảnh',
           message:
-              'Fuel Tracker cần quyền đọc ảnh để đặt avatar. Vui lòng bật trong Cài đặt.',
+          'Fuel Tracker cần quyền đọc ảnh để đặt avatar. Vui lòng bật trong Cài đặt.',
         );
       }
       return false;
@@ -136,10 +136,10 @@ abstract final class AvatarService {
   }
 
   static Future<bool> _requestPermission(
-    BuildContext context,
-    Permission permission,
-    String label,
-  ) async {
+      BuildContext context,
+      Permission permission,
+      String label,
+      ) async {
     var status = await permission.status;
     if (status.isGranted) return true;
 
@@ -157,10 +157,10 @@ abstract final class AvatarService {
   }
 
   static Future<void> _showPermissionDialog(
-    BuildContext context, {
-    required String title,
-    required String message,
-  }) {
+      BuildContext context, {
+        required String title,
+        required String message,
+      }) {
     return showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -201,10 +201,10 @@ abstract final class AvatarService {
   }
 
   static Future<void> _showErrorDialog(
-    BuildContext context, {
-    required String title,
-    required String message,
-  }) {
+      BuildContext context, {
+        required String title,
+        required String message,
+      }) {
     return showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(

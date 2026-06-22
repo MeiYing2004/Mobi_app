@@ -6,14 +6,29 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fuel_tracker_app/core/vehicle_ui_tokens.dart';
 import 'package:fuel_tracker_app/features/fuel/data/services/fuel_service.dart';
 import 'package:fuel_tracker_app/shared/services/user_session_service.dart';
+import 'package:fuel_tracker_app/shared/services/avatar_service.dart';
 import 'package:fuel_tracker_app/shared/widgets/avatar/avatar_picker_sheet.dart';
 import 'package:fuel_tracker_app/shared/widgets/avatar/user_avatar_widget.dart';
 import 'package:fuel_tracker_app/shared/widgets/ios_style_widgets.dart';
-import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
 import 'package:fuel_tracker_app/core/config/osm_config.dart';
 import 'package:fuel_tracker_app/shared/screens/security/change_password_screen.dart';
 import 'package:fuel_tracker_app/shared/screens/security/login_devices_screen.dart';
 import 'package:fuel_tracker_app/shared/screens/security/privacy_screen.dart';
+
+enum _DialogButtonKind { neutral, danger }
+
+class _SettingsActionItem {
+  const _SettingsActionItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+}
 
 /// Bottom sheet cài đặt & hồ sơ người dùng.
 class ProfileSettingsSheet extends StatefulWidget {
@@ -53,6 +68,104 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
     super.dispose();
   }
 
+  void _showGlassNotification(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        content: IosGlassCard(
+          borderRadius: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Icon(
+                isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+                color: isError ? const Color(0xFFFF4D6D) : const Color(0xFF30D158),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _confirmLogout(BuildContext context) async {
+    final theme = Theme.of(context);
+    final result = await showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      builder: (ctx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+          child: IosGlassCard(
+            borderRadius: 24,
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Đăng xuất?',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Bạn có chắc muốn đăng xuất khỏi tài khoản hiện tại?',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DialogButton(
+                        label: 'Hủy',
+                        onPressed: () => Navigator.pop(ctx, false),
+                        kind: _DialogButtonKind.neutral,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _DialogButton(
+                        label: 'Đăng xuất',
+                        onPressed: () => Navigator.pop(ctx, true),
+                        kind: _DialogButtonKind.danger,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    return result ?? false;
+  }
+
   Future<void> _openAvatarPicker() async {
     final session = context.read<UserSessionService>();
     if (!session.isLoggedIn || _pickingAvatar) return;
@@ -68,32 +181,42 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
     final svc = context.read<UserSessionService>();
     var ok = false;
 
-    switch (action) {
-      case AvatarPickerAction.gallery:
-        ok = await svc.pickAndPersistAvatar(
-          context: context,
-          source: ImageSource.gallery,
-        );
-        if (ok) _preferEmoji = false;
-      case AvatarPickerAction.camera:
-        ok = await svc.pickAndPersistAvatar(
-          context: context,
-          source: ImageSource.camera,
-        );
-        if (ok) _preferEmoji = false;
-      case AvatarPickerAction.remove:
-        await svc.clearAvatarImage();
-        ok = true;
-        _preferEmoji = true;
+    try {
+      switch (action) {
+        case AvatarPickerAction.gallery:
+          ok = await svc.pickAndPersistAvatar(
+            context: context,
+            source: ImageSource.gallery,
+          );
+          if (ok) _preferEmoji = false;
+          break;
+        case AvatarPickerAction.camera:
+          ok = await svc.pickAndPersistAvatar(
+            context: context,
+            source: ImageSource.camera,
+          );
+          if (ok) _preferEmoji = false;
+          break;
+        case AvatarPickerAction.remove:
+          await svc.clearAvatarImage();
+          ok = true;
+          _preferEmoji = true;
+          break;
+      }
+    } catch (e) {
+      debugPrint('[ProfileSettingsSheet] Lỗi Avatar: $e');
+      ok = false;
     }
 
     if (!mounted) return;
     setState(() => _pickingAvatar = false);
 
-    if (ok && action != AvatarPickerAction.remove) {
-      ToastService.success(message: 'Đã cập nhật avatar');
-    } else if (action == AvatarPickerAction.remove) {
-      ToastService.success(message: 'Đã xóa ảnh avatar');
+    if (ok) {
+      if (action != AvatarPickerAction.remove) {
+        _showGlassNotification('Đã cập nhật avatar thành công!');
+      } else {
+        _showGlassNotification('Đã xóa ảnh avatar');
+      }
     }
   }
 
@@ -124,7 +247,7 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
     if (!mounted) return;
     setState(() => _saving = false);
     Navigator.pop(context);
-    ToastService.success(message: 'Đã lưu hồ sơ');
+    _showGlassNotification('Đã lưu hồ sơ thành công');
   }
 
   @override
@@ -135,7 +258,6 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
     final size = MediaQuery.sizeOf(context);
     final contentPad = size.width >= 420 ? 24.0 : 16.0;
     final safeTop = MediaQuery.paddingOf(context).top;
-    // Giữ khoảng cách tiêu đề thấp xuống một chút để tách khỏi cụm camera.
     final titleGap = safeTop > 0 ? 24.0 : 16.0;
     final onSurface = theme.colorScheme.onSurface;
     final muted = theme.textTheme.bodySmall?.color ?? onSurface;
@@ -166,211 +288,148 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
           ),
           children: [
             Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                  _SheetTitle(
-                    title: 'Cài đặt',
-                    subtitle: 'Hồ sơ người dùng',
-                    muted: muted,
-                    onClose: () => Navigator.maybePop(context),
-                  ),
-                  const SizedBox(height: 16),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SheetTitle(
+                  title: 'Cài đặt',
+                  subtitle: 'Hồ sơ người dùng',
+                  muted: muted,
+                  onClose: () => Navigator.maybePop(context),
+                ),
+                const SizedBox(height: 16),
 
-                  const _SectionHeader(title: 'Account'),
-                  const SizedBox(height: 12),
-                  _AccountHeroCard(
-                    session: session,
-                    pickingAvatar: _pickingAvatar,
-                    onAvatarTap: session.isLoggedIn ? _openAvatarPicker : null,
-                  ),
+                const _SectionHeader(title: 'Account'),
+                const SizedBox(height: 12),
+                _AccountHeroCard(
+                  session: session,
+                  pickingAvatar: _pickingAvatar,
+                  onAvatarTap: session.isLoggedIn ? _openAvatarPicker : null,
+                ),
 
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'Profile'),
-                  const SizedBox(height: 12),
-                  _EditableProfileFieldCard(
-                    icon: Icons.person_rounded,
-                    title: 'Tên hiển thị',
-                    subtitle: 'Nickname',
-                    controller: _nameCtrl,
-                    errorText: _nameError,
-                  ),
-                  const SizedBox(height: 12),
-                  _EditableProfileFieldCard(
-                    icon: Icons.directions_car_filled_rounded,
-                    title: 'Xe hiện tại',
-                    subtitle: 'Vehicle',
-                    controller: _vehicleCtrl,
-                  ),
+                const SizedBox(height: 18),
+                const _SectionHeader(title: 'Profile'),
+                const SizedBox(height: 12),
+                _EditableProfileFieldCard(
+                  icon: Icons.person_rounded,
+                  title: 'Tên hiển thị',
+                  subtitle: 'Nickname',
+                  controller: _nameCtrl,
+                  errorText: _nameError,
+                ),
+                const SizedBox(height: 12),
+                _EditableProfileFieldCard(
+                  icon: Icons.directions_car_filled_rounded,
+                  title: 'Xe hiện tại',
+                  subtitle: 'Vehicle',
+                  controller: _vehicleCtrl,
+                ),
 
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'Appearance'),
-                  const SizedBox(height: 12),
-                  _DarkModeCard(
-                    value: session.darkMode,
-                    onChanged: session.setDarkMode,
-                  ),
+                const SizedBox(height: 18),
+                const _SectionHeader(title: 'Appearance'),
+                const SizedBox(height: 12),
+                _DarkModeCard(
+                  value: session.darkMode,
+                  onChanged: session.setDarkMode,
+                ),
 
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'Avatar'),
-                  const SizedBox(height: 12),
-                  _AvatarHero(
-                    session: session,
-                    muted: muted,
-                    pickingAvatar: _pickingAvatar,
-                    onTap: session.isLoggedIn ? _openAvatarPicker : null,
-                  ),
-                  const SizedBox(height: 14),
-                  _AvatarPresetGrid(
-                    choices: _avatarChoices,
-                    selected: _preferEmoji && !session.hasCustomAvatar ? _avatarEmoji : null,
-                    onPick: (emoji) => setState(() {
-                      _avatarEmoji = emoji;
-                      _preferEmoji = true;
-                    }),
-                  ),
+                const SizedBox(height: 18),
+                const _SectionHeader(title: 'Avatar'),
+                const SizedBox(height: 12),
+                _AvatarHero(
+                  session: session,
+                  muted: muted,
+                  pickingAvatar: _pickingAvatar,
+                  onTap: session.isLoggedIn ? _openAvatarPicker : null,
+                ),
+                const SizedBox(height: 14),
+                _AvatarPresetGrid(
+                  choices: _avatarChoices,
+                  selected: _preferEmoji && !session.hasCustomAvatar ? _avatarEmoji : null,
+                  onPick: (emoji) => setState(() {
+                    _avatarEmoji = emoji;
+                    _preferEmoji = true;
+                  }),
+                ),
 
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'Premium'),
-                  const SizedBox(height: 12),
-                  _PremiumMembershipCard(session: session),
+                const SizedBox(height: 18),
+                const _SectionHeader(title: 'Premium'),
+                const SizedBox(height: 12),
+                _PremiumMembershipCard(session: session),
 
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'Security'),
-                  const SizedBox(height: 12),
-                  _SettingsActionRow(
-                    items: [
-                      _SettingsActionItem(
-                        icon: Icons.lock_rounded,
-                        title: 'Đổi mật khẩu',
-                        subtitle: 'Bảo mật',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const ChangePasswordScreen(),
-                          ),
+                const SizedBox(height: 18),
+                const _SectionHeader(title: 'Security'),
+                const SizedBox(height: 12),
+                _SettingsActionRow(
+                  items: [
+                    _SettingsActionItem(
+                      icon: Icons.lock_rounded,
+                      title: 'Đổi mật khẩu',
+                      subtitle: 'Bảo mật',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ChangePasswordScreen(),
                         ),
                       ),
-                      _SettingsActionItem(
-                        icon: Icons.phone_iphone_rounded,
-                        title: 'Thiết bị đăng nhập',
-                        subtitle: 'Phiên đăng nhập',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const LoginDevicesScreen(),
-                          ),
+                    ),
+                    _SettingsActionItem(
+                      icon: Icons.phone_iphone_rounded,
+                      title: 'Thiết bị đăng nhập',
+                      subtitle: 'Phiên đăng nhập',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const LoginDevicesScreen(),
                         ),
                       ),
-                      _SettingsActionItem(
-                        icon: Icons.shield_rounded,
-                        title: 'Quyền riêng tư',
-                        subtitle: 'Dữ liệu & quyền',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => const PrivacyScreen(),
-                          ),
+                    ),
+                    _SettingsActionItem(
+                      icon: Icons.shield_rounded,
+                      title: 'Quyền riêng tư',
+                      subtitle: 'Dữ liệu & quyền',
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PrivacyScreen(),
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 18),
-                  const _SectionHeader(title: 'About'),
-                  const SizedBox(height: 12),
-                  const _AboutCard(
-                    version: OsmConfig.appVersion,
-                    developer: 'Mobiapp',
-                  ),
-
-                  const SizedBox(height: 18),
-                  _SaveButton(
-                    saving: _saving,
-                    onPressed: _saving ? null : _save,
-                  ),
-                  const SizedBox(height: 12),
-                  _LogoutButton(
-                    enabled: session.isLoggedIn && !_saving,
-                    onLogout: () async {
-                      final nav = Navigator.of(context);
-                      final svc = session;
-                      final ok = await _confirmLogout(context);
-                      if (!ok || !mounted) return;
-                      await svc.logout();
-                      if (!mounted) return;
-                      nav.pop();
-                    },
-                  ),
+                    ),
                   ],
-                )
-                  .animate()
-                  .fadeIn(duration: 260.ms, curve: Curves.easeOut)
-                  .slideY(begin: 0.02, end: 0, duration: 420.ms, curve: Curves.easeOutCubic),
+                ),
+
+                const SizedBox(height: 18),
+                const _SectionHeader(title: 'About'),
+                const SizedBox(height: 12),
+                _AboutCard(
+                  version: OsmConfig.appVersion,
+                  developer: 'Mobiapp',
+                ),
+
+                const SizedBox(height: 18),
+                _SaveButton(
+                  saving: _saving,
+                  onPressed: _saving ? null : _save,
+                ),
+                const SizedBox(height: 12),
+                _LogoutButton(
+                  enabled: session.isLoggedIn && !_saving,
+                  onLogout: () async {
+                    final nav = Navigator.of(context);
+                    final svc = session;
+                    final ok = await _confirmLogout(context);
+                    if (!ok || !mounted) return;
+                    await svc.logout();
+                    if (!mounted) return;
+                    nav.pop();
+                  },
+                ),
+              ],
+            )
+                .animate()
+                .fadeIn(duration: 260.ms, curve: Curves.easeOut)
+                .slideY(begin: 0.02, end: 0, duration: 420.ms, curve: Curves.easeOutCubic),
           ],
         ),
       ),
     );
   }
-
-  // Legacy field/chips were replaced by premium cards above.
-}
-
-Future<bool> _confirmLogout(BuildContext context) async {
-  final theme = Theme.of(context);
-  final result = await showDialog<bool>(
-    context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.55),
-    builder: (ctx) {
-      return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        child: IosGlassCard(
-          borderRadius: 24,
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Đăng xuất?',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: -0.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Bạn có chắc muốn đăng xuất khỏi tài khoản hiện tại?',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _DialogButton(
-                      label: 'Hủy',
-                      onPressed: () => Navigator.pop(ctx, false),
-                      kind: _DialogButtonKind.neutral,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _DialogButton(
-                      label: 'Đăng xuất',
-                      onPressed: () => Navigator.pop(ctx, true),
-                      kind: _DialogButtonKind.danger,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
-  return result ?? false;
 }
 
 class _SheetTitle extends StatelessWidget {
@@ -434,7 +493,6 @@ class _SheetTitle extends StatelessWidget {
 
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title});
-
   final String title;
 
   @override
@@ -605,7 +663,6 @@ class _AccountHeroCard extends StatelessWidget {
 
 class _GlowOrb extends StatelessWidget {
   const _GlowOrb({required this.size, required this.color});
-
   final double size;
   final Color color;
 
@@ -631,7 +688,6 @@ class _MiniStatCard extends StatelessWidget {
     required this.label,
     required this.value,
   });
-
   final IconData icon;
   final String label;
   final String value;
@@ -706,7 +762,6 @@ class _PremiumAvatar extends StatelessWidget {
     required this.picking,
     required this.onTap,
   });
-
   final double size;
   final double fontSize;
   final bool picking;
@@ -789,20 +844,17 @@ class _PremiumAvatar extends StatelessWidget {
           ],
         ),
       ),
-    )
-        .animate()
-        .scale(
-          duration: 260.ms,
-          curve: Curves.easeOutBack,
-          begin: const Offset(0.98, 0.98),
-          end: const Offset(1, 1),
-        );
+    ).animate().scale(
+      duration: 260.ms,
+      curve: Curves.easeOutBack,
+      begin: const Offset(0.98, 0.98),
+      end: const Offset(1, 1),
+    );
   }
 }
 
 class _PremiumShimmerBadge extends StatefulWidget {
   const _PremiumShimmerBadge({required this.enabled, required this.label});
-
   final bool enabled;
   final String label;
 
@@ -833,16 +885,16 @@ class _PremiumShimmerBadgeState extends State<_PremiumShimmerBadge>
   Widget build(BuildContext context) {
     final base = widget.enabled
         ? const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFE08A), Color(0xFFFFC857), Color(0xFFB7791F)],
-          )
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFFE08A), Color(0xFFFFC857), Color(0xFFB7791F)],
+    )
         : LinearGradient(
-            colors: [
-              Colors.white.withValues(alpha: 0.18),
-              Colors.white.withValues(alpha: 0.08),
-            ],
-          );
+      colors: [
+        Colors.white.withValues(alpha: 0.18),
+        Colors.white.withValues(alpha: 0.08),
+      ],
+    );
 
     return AnimatedBuilder(
       animation: _c,
@@ -871,17 +923,17 @@ class _PremiumShimmerBadgeState extends State<_PremiumShimmerBadge>
             ),
             boxShadow: widget.enabled
                 ? [
-                    BoxShadow(
-                      color: const Color(0xFFFFC857).withValues(alpha: 0.35),
-                      blurRadius: 22,
-                      offset: const Offset(0, 12),
-                    ),
-                  ]
+              BoxShadow(
+                color: const Color(0xFFFFC857).withValues(alpha: 0.35),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
+              ),
+            ]
                 : null,
           ),
           child: ShaderMask(
-            shaderCallback: (r) => shimmer.createShader(r),
             blendMode: BlendMode.srcATop,
+            shaderCallback: (r) => shimmer.createShader(r),
             child: Text(
               widget.label,
               maxLines: 2,
@@ -909,7 +961,6 @@ class _EditableProfileFieldCard extends StatelessWidget {
     required this.controller,
     this.errorText,
   });
-
   final IconData icon;
   final String title;
   final String subtitle;
@@ -987,7 +1038,6 @@ class _EditableProfileFieldCard extends StatelessWidget {
 
 class _DarkModeCard extends StatelessWidget {
   const _DarkModeCard({required this.value, required this.onChanged});
-
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -1017,9 +1067,7 @@ class _DarkModeCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Center(
-              child: Text('🌙', style: TextStyle(fontSize: 18)),
-            ),
+            child: const Center(child: Text('🌙', style: TextStyle(fontSize: 18))),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1047,10 +1095,7 @@ class _DarkModeCard extends StatelessWidget {
               ],
             ),
           ),
-          Switch.adaptive(
-            value: value,
-            onChanged: onChanged,
-          ),
+          Switch.adaptive(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -1064,7 +1109,6 @@ class _AvatarHero extends StatelessWidget {
     required this.pickingAvatar,
     required this.onTap,
   });
-
   final UserSessionService session;
   final Color muted;
   final bool pickingAvatar;
@@ -1077,12 +1121,7 @@ class _AvatarHero extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Column(
         children: [
-          _PremiumAvatar(
-            size: 120,
-            fontSize: 48,
-            picking: pickingAvatar,
-            onTap: onTap,
-          ),
+          _PremiumAvatar(size: 120, fontSize: 48, picking: pickingAvatar, onTap: onTap),
           const SizedBox(height: 12),
           Text(
             session.isLoggedIn ? 'Chạm để thay đổi ảnh đại diện' : 'Đăng nhập để đổi avatar',
@@ -1105,7 +1144,6 @@ class _AvatarPresetGrid extends StatelessWidget {
     required this.selected,
     required this.onPick,
   });
-
   final List<String> choices;
   final String? selected;
   final ValueChanged<String> onPick;
@@ -1114,21 +1152,17 @@ class _AvatarPresetGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenW = MediaQuery.sizeOf(context).width;
     final item = screenW >= 600 ? 92.0 : 80.0;
-
     return Wrap(
       alignment: WrapAlignment.center,
       runAlignment: WrapAlignment.center,
       spacing: 12,
       runSpacing: 12,
-      children: choices.map((e) {
-        final isSelected = selected == e;
-        return _PresetMiniCard(
-          size: item,
-          emoji: e,
-          selected: isSelected,
-          onTap: () => onPick(e),
-        );
-      }).toList(growable: false),
+      children: choices.map((e) => _PresetMiniCard(
+        size: item,
+        emoji: e,
+        selected: selected == e,
+        onTap: () => onPick(e),
+      )).toList(growable: false),
     );
   }
 }
@@ -1140,7 +1174,6 @@ class _PresetMiniCard extends StatefulWidget {
     required this.selected,
     required this.onTap,
   });
-
   final double size;
   final String emoji;
   final bool selected;
@@ -1158,22 +1191,6 @@ class _PresetMiniCardState extends State<_PresetMiniCard> {
     final border = widget.selected
         ? VehicleUi.accentBlue.withValues(alpha: 0.85)
         : Colors.white.withValues(alpha: 0.14);
-    final glow = widget.selected
-        ? [
-            BoxShadow(
-              color: VehicleUi.accentBlue.withValues(alpha: 0.35),
-              blurRadius: 22,
-              offset: const Offset(0, 12),
-            ),
-          ]
-        : [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 18,
-              offset: const Offset(0, 12),
-            ),
-          ];
-
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
@@ -1199,21 +1216,16 @@ class _PresetMiniCardState extends State<_PresetMiniCard> {
               ],
             ),
             border: Border.all(color: border, width: widget.selected ? 1.6 : 1.0),
-            boxShadow: glow,
+            boxShadow: widget.selected
+                ? [BoxShadow(color: VehicleUi.accentBlue.withValues(alpha: 0.35), blurRadius: 22, offset: const Offset(0, 12))]
+                : [BoxShadow(color: Colors.black.withValues(alpha: 0.28), blurRadius: 18, offset: const Offset(0, 12))],
           ),
           child: Center(
             child: Text(
               widget.emoji,
               style: TextStyle(
                 fontSize: widget.size >= 92 ? 30 : 28,
-                shadows: widget.selected
-                    ? [
-                        Shadow(
-                          color: VehicleUi.accentBlue.withValues(alpha: 0.35),
-                          blurRadius: 14,
-                        ),
-                      ]
-                    : null,
+                shadows: widget.selected ? [Shadow(color: VehicleUi.accentBlue.withValues(alpha: 0.35), blurRadius: 14)] : null,
               ),
             ),
           ),
@@ -1225,135 +1237,96 @@ class _PresetMiniCardState extends State<_PresetMiniCard> {
 
 class _PremiumMembershipCard extends StatelessWidget {
   const _PremiumMembershipCard({required this.session});
-
   final UserSessionService session;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final status = session.isPremiumActive ? 'Active' : 'Free';
-    final plan = session.isPremiumActive ? session.premiumPlanLabel : '—';
-    final exp = session.isPremiumActive && session.premiumExpireAt.isNotEmpty
-        ? session.premiumExpireAt
-        : '—';
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 340;
-
-        final titleColumn = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            Text(
-              'Premium Membership',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 15,
-                color: Colors.white,
-                letterSpacing: -0.2,
-              ),
-            ),
-            SizedBox(height: 2),
-            Text(
-              'Plan, trạng thái & quản lý',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0x99FFFFFF),
-              ),
-            ),
-          ],
-        );
-
-        final headerRow = Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFFE08A), Color(0xFFB7791F)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFFC857).withValues(alpha: 0.28),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFF2B1600), size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(child: titleColumn),
-            if (!compact) const SizedBox(width: 8),
-            if (!compact)
-              _PremiumShimmerBadge(
-                enabled: session.isPremiumActive,
-                label: session.isPremiumActive ? 'PREMIUM' : 'FREE',
-              ),
-          ],
-        );
-
-        return IosGlassCard(
-          borderRadius: 24,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return IosGlassCard(
+      borderRadius: 24,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              headerRow,
-              if (compact) ...[
-                const SizedBox(height: 10),
-                _PremiumShimmerBadge(
-                  enabled: session.isPremiumActive,
-                  label: session.isPremiumActive ? 'PREMIUM' : 'FREE',
-                ),
-              ],
-              const SizedBox(height: 14),
-              _KeyValueRow(label: 'Status', value: status),
-              const SizedBox(height: 8),
-              _KeyValueRow(label: 'Plan', value: plan),
-              const SizedBox(height: 8),
-              _KeyValueRow(label: 'Expire', value: exp),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: null,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFE08A), Color(0xFFB7791F)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: Text(
-                    'Manage Membership',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.75),
-                      fontWeight: FontWeight.w800,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFC857).withValues(alpha: 0.28),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
                     ),
-                  ),
+                  ],
+                ),
+                child: const Icon(Icons.workspace_premium_rounded, color: Color(0xFF2B1600), size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Premium Membership',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        color: Colors.white,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Plan, trạng thái & quản lý',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0x99FFFFFF)),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 14),
+          _KeyValueRow(label: 'Status', value: session.isPremiumActive ? 'Active' : 'Free'),
+          const SizedBox(height: 8),
+          _KeyValueRow(label: 'Plan', value: session.isPremiumActive ? session.premiumPlanLabel : '—'),
+          const SizedBox(height: 8),
+          _KeyValueRow(label: 'Expire', value: session.isPremiumActive && session.premiumExpireAt.isNotEmpty ? session.premiumExpireAt : '—'),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: null,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              ),
+              child: Text(
+                'Manage Membership',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _KeyValueRow extends StatelessWidget {
   const _KeyValueRow({required this.label, required this.value});
-
   final String label;
   final String value;
 
@@ -1385,140 +1358,83 @@ class _KeyValueRow extends StatelessWidget {
   }
 }
 
-class _SettingsActionItem {
-  const _SettingsActionItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-}
-
 class _SettingsActionRow extends StatelessWidget {
   const _SettingsActionRow({required this.items});
-
   final List<_SettingsActionItem> items;
 
   @override
   Widget build(BuildContext context) {
-    Widget comingSoonBadge(String label) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: VehicleUi.accentBlue.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(
-            color: VehicleUi.accentBlueGlow.withValues(alpha: 0.35),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.9),
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.1,
-            height: 1.1,
-          ),
-        ),
-      );
-    }
-
     return Column(
-      children: items
-          .map(
-            (i) => Padding(
-              padding: EdgeInsets.only(bottom: i == items.last ? 0 : 10),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: i.onTap,
-                  borderRadius: BorderRadius.circular(24),
-                  splashColor: VehicleUi.accentBlue.withValues(alpha: 0.14),
-                  highlightColor: VehicleUi.accentBlue.withValues(alpha: 0.06),
-                  child: IosGlassCard(
-                    borderRadius: 24,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.white.withValues(alpha: 0.16),
-                                Colors.white.withValues(alpha: 0.05),
-                              ],
-                            ),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
-                            ),
-                          ),
-                          child: Icon(
-                            i.icon,
-                            color: Colors.white.withValues(alpha: 0.9),
-                            size: 20,
-                          ),
+      children: items.map((i) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: i == items.last ? 0 : 10),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: i.onTap,
+              borderRadius: BorderRadius.circular(24),
+              child: IosGlassCard(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                borderRadius: 24,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withValues(alpha: 0.16),
+                            Colors.white.withValues(alpha: 0.05),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                i.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  color: Colors.white,
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              if (i.subtitle.trim().toLowerCase() ==
-                                  'sắp ra mắt')
-                                comingSoonBadge(i.subtitle)
-                              else
-                                Text(
-                                  i.subtitle,
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.6),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.white.withValues(alpha: 0.35),
-                        ),
-                      ],
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                      ),
+                      child: Icon(i.icon, color: Colors.white.withValues(alpha: 0.9), size: 20),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            i.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 15,
+                              color: Colors.white,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            i.subtitle,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: Colors.white.withValues(alpha: 0.35)),
+                  ],
                 ),
               ),
             ),
-          )
-          .toList(growable: false),
+          ),
+        );
+      }).toList(),
     );
   }
 }
 
 class _AboutCard extends StatelessWidget {
   const _AboutCard({required this.version, required this.developer});
-
   final String version;
   final String developer;
 
@@ -1559,7 +1475,6 @@ class _AboutCard extends StatelessWidget {
 
 class _SaveButton extends StatelessWidget {
   const _SaveButton({required this.saving, required this.onPressed});
-
   final bool saving;
   final VoidCallback? onPressed;
 
@@ -1574,26 +1489,11 @@ class _SaveButton extends StatelessWidget {
           backgroundColor: theme.colorScheme.primary,
           foregroundColor: theme.colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         ),
         child: saving
-            ? SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colorScheme.onPrimary,
-                ),
-              )
-            : Text(
-                'Lưu hồ sơ',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: theme.colorScheme.onPrimary,
-                ),
-              ),
+            ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary))
+            : Text('Lưu hồ sơ', style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900, color: theme.colorScheme.onPrimary)),
       ),
     );
   }
@@ -1601,7 +1501,6 @@ class _SaveButton extends StatelessWidget {
 
 class _LogoutButton extends StatelessWidget {
   const _LogoutButton({required this.enabled, required this.onLogout});
-
   final bool enabled;
   final VoidCallback onLogout;
 
@@ -1638,12 +1537,7 @@ class _LogoutButton extends StatelessWidget {
                 SizedBox(width: 10),
                 Text(
                   'Đăng xuất',
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: -0.2,
-                  ),
+                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.2),
                 ),
               ],
             ),
@@ -1654,15 +1548,8 @@ class _LogoutButton extends StatelessWidget {
   }
 }
 
-enum _DialogButtonKind { neutral, danger }
-
 class _DialogButton extends StatelessWidget {
-  const _DialogButton({
-    required this.label,
-    required this.onPressed,
-    required this.kind,
-  });
-
+  const _DialogButton({required this.label, required this.onPressed, required this.kind});
   final String label;
   final VoidCallback onPressed;
   final _DialogButtonKind kind;
@@ -1677,49 +1564,17 @@ class _DialogButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           gradient: isDanger
-              ? const LinearGradient(
-                  colors: [Color(0xFFFF4D6D), Color(0xFFB91C1C)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : LinearGradient(
-                  colors: [
-                    Colors.white.withValues(alpha: 0.12),
-                    Colors.white.withValues(alpha: 0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+              ? const LinearGradient(colors: [Color(0xFFFF4D6D), Color(0xFFB91C1C)], begin: Alignment.topLeft, end: Alignment.bottomRight)
+              : LinearGradient(colors: [Colors.white.withValues(alpha: 0.12), Colors.white.withValues(alpha: 0.05)], begin: Alignment.topLeft, end: Alignment.bottomRight),
           border: Border.all(color: Colors.white.withValues(alpha: isDanger ? 0.16 : 0.12)),
         ),
         child: Center(
           child: Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.2,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.2),
           ),
         ),
       ),
     );
-  }
-}
-
-/// Avatar trên header bản đồ.
-class ProfileAvatarBadge extends StatelessWidget {
-  final double size;
-  final double fontSize;
-
-  const ProfileAvatarBadge({
-    super.key,
-    this.size = 44,
-    this.fontSize = 20,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return UserAvatarWidget(size: size, fontSize: fontSize);
   }
 }

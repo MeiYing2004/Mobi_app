@@ -65,8 +65,94 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         return;
       }
 
-      ToastService.success(message: 'Đã đổi mật khẩu');
-      Navigator.of(context).pop();
+      // 🔥 THAY THẾ LUỒNG POP CŨ THÀNH DIALOG THÔNG BÁO THÀNH CÔNG CAO CẤP
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false, // Bắt buộc người dùng phải nhấn Xác nhận
+        builder: (ctx) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+            child: IosGlassCard(
+              borderRadius: 24,
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Icon Check xanh neon phong cách Luxury iOS
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF30D158).withValues(alpha: 0.16),
+                      border: Border.all(color: const Color(0xFF30D158), width: 1.5),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      color: Color(0xFF30D158),
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Đổi mật khẩu thành công',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Mật khẩu mới của bạn đã được ghi nhận và đồng bộ hóa vào tệp dữ liệu demo hệ thống thành công.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.7),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Nút bấm Xác nhận đóng luồng và quay về
+                  SizedBox(
+                    width: double.infinity,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx); // Đóng Hộp thoại thông báo
+                        if (mounted) Navigator.of(context).pop(); // Quay về màn hình Hồ sơ
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF5BB8FF), Color(0xFF0A84FF)],
+                          ),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Xác nhận',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -221,17 +307,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                   child: _saving
                       ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            color: Colors.white,
-                          ),
-                        )
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: Colors.white,
+                    ),
+                  )
                       : const Text(
-                          'Cập nhật mật khẩu',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
+                    'Cập nhật mật khẩu',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                 ),
               ],
             ),
@@ -289,4 +375,3 @@ class _PasswordField extends StatelessWidget {
     );
   }
 }
-

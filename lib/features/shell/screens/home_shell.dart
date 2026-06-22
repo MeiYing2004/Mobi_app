@@ -53,6 +53,7 @@ import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_shel
 import 'package:fuel_tracker_app/shared/screens/profile_settings_sheet.dart';
 import 'package:fuel_tracker_app/shared/widgets/account_drawer/account_drawer.dart';
 import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
+import 'package:fuel_tracker_app/shared/widgets/avatar/user_avatar_widget.dart';
 import 'package:fuel_tracker_app/core/theme/luxury_tokens.dart';
 import 'package:fuel_tracker_app/core/theme/luxury_widgets.dart';
 
@@ -1986,7 +1987,7 @@ class _HomeShellState extends State<HomeShell>
                                 boxShadow: VehicleUi.floatingShadowNear,
                               ),
                               alignment: Alignment.center,
-                              child: const ProfileAvatarBadge(),
+                              child: UserAvatarWidget(size: 44, fontSize: 20),
                             ),
                           ),
                         ],
