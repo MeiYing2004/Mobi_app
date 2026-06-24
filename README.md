@@ -1,393 +1,830 @@
 # Fuel Tracker Pro
 
-Ứng dụng Flutter theo dõi GPS realtime, bản đồ **OpenStreetMap** (flutter_map), quản lý nhiên liệu và chỉ đường tới trạm xăng — **không cần API key**.
+Ứng dụng Flutter đa nền tảng (Android / iOS / Windows / Web) theo dõi GPS realtime, bản đồ OpenStreetMap, quản lý nhiên liệu và chỉ đường tới trạm xăng — **không cần API key** cho các dịch vụ OSM.
 
-Nguồn tác giả: **Lữ Minh Hoàng**
+**Tác giả:** Lữ Minh Hoàng  
+**Package:** `fuel_tracker_app`  
+**Phiên bản:** `2.0.0+1` (`pubspec.yaml`)
 
-## Stack
+### Đội ngũ phát triển
+
+| Thành viên | Vai trò |
+|---|---|
+| **Hoàng** | Lead Frontend |
+| **Đăng Khoa** | Lead Backend |
+| **Khánh** | Data Engineer |
+| **Nguyên** | AI Engineer |
+| **No** | DevOps & QA |
+
+Chi tiết phân công, RACI và onboarding: [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md)
+
+---
+
+## 1. Tổng quan dự án
+
+### Tên dự án
+
+- **Tên hiển thị:** Fuel Tracker Pro (`lib/main.dart` — `title: 'Fuel Tracker Pro'`)
+- **Tên package:** `fuel_tracker_app` (`pubspec.yaml`)
+
+### Mục đích hệ thống
+
+Ứng dụng client-side giúp người dùng:
+
+1. Theo dõi vị trí GPS realtime trên bản đồ OSM.
+2. Tìm kiếm địa điểm (Nominatim, ưu tiên Việt Nam) và tính tuyến lái xe (OSRM).
+3. Quản lý mức nhiên liệu, cảnh báo xăng thấp, gợi ý trạm xăng (Overpass / Nominatim).
+4. Phân tích tiêu hao nhiên liệu trên tuyến (engine local trong `lib/features/fuel/intelligence/`).
+5. Mô phỏng launcher iOS và demo UI học tập (Group3 Food Demo).
+
+**Không có backend server riêng** — toàn bộ logic chạy trên thiết bị; dữ liệu người dùng lưu local (`data.json` + SharedPreferences).
+
+### Đối tượng sử dụng
+
+- Người lái xe / xe máy cần theo dõi nhiên liệu và chỉ đường tới trạm xăng.
+- Người dùng demo tài khoản local (đăng ký / đăng nhập trong app).
+- Người học Flutter (module Group3 demo widget).
+
+### Công nghệ sử dụng
 
 | Thành phần | Công nghệ |
 |---|---|
-| Bản đồ | flutter_map + Carto Dark Matter (OSM) |
-| GPS | geolocator |
-| Geocoding (tìm kiếm + reverse) | Nominatim (countrycodes=vn, accept-language=vi) |
-| Cây xăng | Overpass API (amenity=fuel) |
-| Tuyến đường | OSRM |
-| Animation | flutter_map_animations, flutter_animate |
+| Framework | Flutter SDK `>=3.3.0 <4.0.0` |
+| Bản đồ | `flutter_map` ^7.0.2 + Carto Dark Matter tiles |
+| GPS | `geolocator` ^13.0.2 |
+| Geocoding | Nominatim (`countrycodes=vn`, `accept-language=vi`) |
+| Cây xăng | Overpass API (`amenity=fuel`) |
+| Tuyến đường | OSRM (`router.project-osrm.org`) |
+| Thời tiết | Open-Meteo API |
+| State | `provider` ^6.1.2 + `flutter_riverpod` ^3.3.1 |
+| Lưu trữ local | `shared_preferences`, JSON file, avatar file |
+| Thông báo | `flutter_local_notifications` ^17.2.4 |
+| Animation | `flutter_map_animations`, `flutter_animate` |
 
-## Kiến trúc tổng quan
+---
 
-```
-main.dart
-├── core/              → cấu hình, HTTP, theme, motion, guard
-├── shared/            → providers, services dùng chung, widget tái sử dụng
-└── features/
-    ├── shell/         → điều phối UI chính (map + nav + fuel trên một màn hình)
-    ├── home_ios/      → launcher iOS giả (màn hình home, Dynamic Island, …)
-    ├── map/           → flutter_map, tile, style, MapPanel
-    ├── geocoding/     → Nominatim search / reverse / lookup
-    ├── navigation/    → OSRM routing, progress, off-route, HUD, session
-    ├── location/      → GPS realtime, filter, tracking policy
-    └── fuel/          → xăng, trạm, tiêu hao, intelligence UI
-```
+## 2. Chức năng hiện có
 
-Luồng dữ liệu chính:
+> Mỗi mục dưới đây có dẫn chứng từ source code. Các tính năng ghi **(demo / chưa hoàn thiện)** được đánh dấu rõ.
 
-```
-GPS (location) → HomeShell
-    → tìm địa điểm (geocoding) → tính tuyến (navigation/OSRM)
-    → vẽ map (map) + HUD (navigation)
-    → trạm xăng / tiêu hao (fuel)
+### 2.1 Launcher iOS giả
+
+| | |
+|---|---|
+| **Mục đích** | Mô phỏng màn hình home iPhone: lưới icon, dock, wallpaper, gesture mở Control Center / Notification Center / Spotlight |
+| **Luồng** | `main.dart` → `LauncherShell` → `IosHomeScreen` → tap icon → `AppLaunchOverlay` → mở app thật |
+| **File** | `lib/features/home_ios/presentation/launcher_shell.dart`, `pages/ios_home_screen.dart`, `widgets/app_launch_overlay.dart`, `widgets/dynamic_island_overlay.dart`, `widgets/control_center_overlay.dart`, `widgets/notification_center_overlay.dart`, `widgets/spotlight_overlay.dart` |
+
+**App thật trong catalog** (`lib/features/home_ios/data/ios_app_catalog.dart`):
+
+- `fuel_tracker` → Fuel Tracker (`HomeScreen` / `HomeShell`)
+- `group3_food_demo` → Food Demo (`Group3FoodDemoScreen`)
+- Các icon còn lại (Maps, Weather, …) là **placeholder UI**, không mở app chức năng.
+
+### 2.2 Bản đồ realtime (Map)
+
+| | |
+|---|---|
+| **Mục đích** | Hiển thị bản đồ OSM, vị trí người dùng, cluster trạm xăng, polyline tuyến, pin đích, vòng range nhiên liệu |
+| **Luồng** | `HomeShell` truyền props → `MapPanel` render layers |
+| **File** | `lib/features/map/presentation/widgets/map_panel.dart`, `lib/features/map/core/map_style.dart` |
+
+**Style bản đồ hỗ trợ:** dark, standard, satellite, terrain (`MapVisualStyle` enum).
+
+### 2.3 GPS & theo dõi vị trí
+
+| | |
+|---|---|
+| **Mục đích** | Stream vị trí, bearing, tốc độ; lọc nhiễu GPS; tích lũy quãng đường để trừ nhiên liệu |
+| **Luồng** | `LocationService.startListening()` → `HomeShell._onLocationChanged` → cập nhật map / navigation / fuel |
+| **File** | `lib/features/location/data/services/location_service.dart`, `lib/features/location/core/gps_position_filter.dart`, `lib/features/location/core/gps_tracking_policy.dart` |
+
+### 2.4 Tìm kiếm địa điểm (Geocoding)
+
+| | |
+|---|---|
+| **Mục đích** | Tìm địa chỉ tiếng Việt (có/không dấu), reverse geocoding, resolve tọa độ cho navigation |
+| **Luồng** | `MapSearchBar` debounce → `NominatimGeocodingService.search` → `PlaceSuggestionsPanel` → chọn → `HomeShell._navigateToPlace` |
+| **File** | `lib/features/geocoding/data/services/nominatim_geocoding_service.dart`, `presentation/widgets/map_search_bar.dart`, `presentation/widgets/place_suggestions_panel.dart`, `core/vietnamese_text_utils.dart` |
+
+### 2.5 Chỉ đường & Navigation (OSRM)
+
+| | |
+|---|---|
+| **Mục đích** | Tính tuyến lái xe, hiển thị HUD (km, ETA), phát hiện lệch tuyến, reroute, khôi phục phiên |
+| **Luồng** | Chọn đích → `MapNavigationRepository.planRoute` → `OsrmRoutingService` → vẽ polyline → `NavigationHud` → GPS follow → off-route → reroute |
+| **File** | `lib/features/navigation/data/services/osrm_routing_service.dart`, `data/repositories/map_navigation_repository.dart`, `presentation/widgets/navigation_hud.dart`, `data/session/navigation_session_store.dart`, `core/route_off_route.dart`, `core/route_progress_utils.dart` |
+
+### 2.6 Trạm xăng & quản lý nhiên liệu
+
+| | |
+|---|---|
+| **Mục đích** | Tìm trạm xăng quanh user / dọc tuyến; theo dõi mức xăng; cảnh báo thấp; luồng đổ xăng trên HUD |
+| **Luồng** | `GasStationService` (Overpass) → cluster trên map → tap trạm → sheet → bắt đầu navigation; `FuelService.consumeDistanceMeters` trừ xăng theo GPS |
+| **File** | `lib/features/fuel/data/services/gas_station_service.dart`, `fuel_station_service.dart`, `fuel_service.dart`, `route_fuel_service.dart`, `data/models/gas_station.dart`, `data/models/refuel_flow_phase.dart` |
+
+### 2.7 Fuel Intelligence (phân tích nhiên liệu)
+
+| | |
+|---|---|
+| **Mục đích** | Màn hình tab Fuel: dự đoán range, biểu đồ tiêu hao, thời tiết, cảnh báo, mô phỏng tuyến |
+| **Luồng** | `ShellBottomNav` tab Fuel → `FuelIntelligenceScreen.open` → `FuelIntelligenceViewModel` aggregate engines |
+| **File** | `lib/features/fuel/presentation/screens/fuel_intelligence_screen.dart`, `viewmodels/fuel_intelligence_view_model.dart`, `intelligence/prediction/`, `intelligence/simulation/`, `intelligence/warnings/`, `intelligence/consumption/`, `intelligence/driving_behavior/` |
+
+**Ghi chú:** Engine dự đoán chạy **local trên thiết bị** — không gọi LLM / AI API bên ngoài. Nhãn "AI" trong Premium chỉ là marketing enum (`PremiumFeature.aiAssistant`), **chưa có màn chatbot**.
+
+**PremiumGuard:** Toàn màn `FuelIntelligenceScreen` bọc `PremiumGuard(feature: fuelAnalytics)` — user FREE bị khóa blur.
+
+### 2.8 Đăng nhập / Đăng ký / Quên mật khẩu
+
+| | |
+|---|---|
+| **Mục đích** | Xác thực local qua email/password lưu trong `data.json` |
+| **Luồng đăng nhập** | `AccountDrawer` / route → `LoginScreen` → `UserSessionService.login` → `UserService.login` → `pushAndRemoveUntil(LauncherShell)` |
+| **Luồng đăng ký** | `RegisterScreen` → `UserSessionService.register` → `pop(true)` |
+| **Quên mật khẩu (demo)** | `ForgotPasswordScreen` 3 bước; OTP cố định `123456` (`UserSessionService.mockOtp`) |
+| **File** | `lib/features/auth/screens/login_screen.dart`, `register_screen.dart`, `forgot_password_screen.dart`, `services/user_service.dart`, `data/user_data_store.dart`, `shared/services/user_session_service.dart` |
+
+**Đăng nhập xã hội (demo):** UI có nút Google/Facebook/Apple (`social_auth_buttons.dart`). Thực tế cần `--dart-define=GOOGLE_LOGIN_CONFIGURED=true` hoặc `FACEBOOK_LOGIN_CONFIGURED=true`; nếu không, trả lỗi "chưa cấu hình". Apple chỉ hiện trên iOS/macOS.
+
+### 2.9 Hồ sơ & Cài đặt
+
+| | |
+|---|---|
+| **Mục đích** | Sửa tên, xe, avatar emoji/ảnh; dark mode; menu bảo mật |
+| **Luồng** | `ShellBottomNav` tab Settings hoặc `AccountDrawer` → `ProfileSettingsSheet` |
+| **File** | `lib/shared/screens/profile_settings_sheet.dart`, `shared/screens/security/change_password_screen.dart`, `login_devices_screen.dart`, `privacy_screen.dart` |
+
+**Chưa hoàn thiện:** Nút "Manage Membership" có `onPressed: null` (`profile_settings_sheet.dart` L1331).
+
+### 2.10 Premium & Thanh toán (demo)
+
+| | |
+|---|---|
+| **Mục đích** | Gói monthly/yearly/lifetime; khóa tính năng FREE vs PREMIUM |
+| **Luồng** | `PremiumGuard` / `AccountDrawer` → `PremiumScreen` → chọn gói + Momo/Bank → `PremiumService.processDemoPayment` (delay 900ms, luôn thành công) → ghi `data.json` |
+| **File** | `lib/features/premium/screens/premium_screen.dart`, `services/premium_service.dart`, `premium_manager.dart`, `widgets/premium_guard.dart` |
+
+**Không có payment gateway thật** — chỉ demo local.
+
+### 2.11 Lịch sử sử dụng (Trip History)
+
+| | |
+|---|---|
+| **Mục đích** | Hiển thị `tripHistory` từ user JSON |
+| **Luồng** | `AccountDrawer` → (cần Premium) → `UsageHistoryScreen` |
+| **File** | `lib/features/auth/screens/usage_history_screen.dart` |
+
+Dữ liệu mẫu trong `assets/data/data.json` — **không tự ghi khi điều hướng thật** (chưa có pipeline ghi trip tự động trong navigation flow).
+
+### 2.12 Hỗ trợ & Điều khoản
+
+| | |
+|---|---|
+| **Mục đích** | Màn hình thông tin tĩnh |
+| **File** | `lib/features/auth/screens/support_screen.dart`, `terms_screen.dart` |
+
+### 2.13 Account Drawer
+
+| | |
+|---|---|
+| **Mục đích** | Menu tài khoản: profile, login, premium, history, support, terms, logout |
+| **File** | `lib/shared/widgets/account_drawer/account_drawer.dart`, `account_drawer_header.dart` |
+
+### 2.14 Thông báo local
+
+| | |
+|---|---|
+| **Mục đích** | Cảnh báo xăng thấp qua notification Android |
+| **Luồng** | `FuelService` low fuel → `NotificationService.showFuelWarning` |
+| **File** | `lib/shared/services/notification_service.dart` |
+
+### 2.15 Group3 Food Demo (học tập UI)
+
+| | |
+|---|---|
+| **Mục đích** | Demo đặt món, giỏ hàng, ListView/GridView/Slivers, bottom sheet |
+| **Luồng** | Launcher → Food Demo icon → `Group3FoodDemoScreen` |
+| **File** | `lib/features/group3_demo/group3_food_demo_screen.dart`, `widgets/food_order_sheet.dart`, `widgets/cart_bar.dart`, `a07_widget_sections.dart` |
+
+**Không lưu dữ liệu** — menu static trong memory.
+
+### 2.16 Web LAN Debug
+
+| | |
+|---|---|
+| **Mục đích** | Chạy Flutter Web trên LAN, overlay debug URL |
+| **File** | `lib/core/web_lan_runtime.dart`, `shared/widgets/web_lan_debug_overlay.dart`, `scripts/run_web_lan.ps1`, `docs/LAN_ACCESS_VI.md` |
+
+### 2.17 Bảo vệ tác giả
+
+| | |
+|---|---|
+| **Mục đích** | Fail fast nếu credit tác giả bị sửa |
+| **File** | `lib/core/author_integrity_guard.dart`, `lib/core/config/constants.dart` (`authorCredit`) |
+
+### 2.18 Khung iPhone trên Desktop
+
+| | |
+|---|---|
+| **Mục đích** | Bọc app trong mockup iPhone 17 Pro Max |
+| **File** | `lib/shared/widgets/iphone_17_pro_max_frame.dart` |
+
+### 2.19 Dynamic Island (iOS bridge)
+
+| | |
+|---|---|
+| **Mục đích** | Hiển thị snapshot navigation trên Dynamic Island giả |
+| **File** | `lib/features/home_ios/data/ios_system_bridge.dart`, `widgets/dynamic_island_overlay.dart` |
+
+### 2.20 CORS / Dev Proxy (Web)
+
+| | |
+|---|---|
+| **Mục đích** | Proxy API OSM khi chạy Web trên LAN (tránh CORS) |
+| **File** | `lib/core/config/lan_dev_config.dart`, `config/lan_web.json`, `tool/dev_cors_proxy.dart` (nếu có) |
+
+---
+
+## 3. Kiến trúc hệ thống
+
+### Frontend
+
+- **Flutter/Dart** — toàn bộ UI và business logic client.
+- **Kiến trúc:** Feature-based + Shell orchestration layer.
+- **Entry:** `lib/main.dart` → `LauncherShell` (home mặc định, không bắt buộc login).
+
+### Backend
+
+**Không tồn tại backend server trong repo.** Không có REST API riêng, không có Node/Python/Go server.
+
+### Database
+
+**Không có SQL/NoSQL database.** Lưu trữ:
+
+| Loại | Cơ chế | File |
+|---|---|---|
+| User database | JSON file | `assets/data/data.json` (seed); native: `{documents}/assets/data/data.json`; web: SharedPreferences key `fuel_tracker_user_database_v1` |
+| App prefs | SharedPreferences | `dark_mode_enabled`, `auth_remember_me`, `auth_remember_email`, `privacy_*`, `navigation_session_v1` |
+| Avatar | File system | `{documents}/avatars/{userId}.jpg` |
+| Cache runtime | In-memory TTL | `lib/core/ttl_cache.dart` |
+
+### AI Service
+
+**Không có AI Service / LLM API trong code.**
+
+Có các engine **local** trong `lib/features/fuel/intelligence/`:
+
+- `FuelPredictionEngine` — dự đoán nhiên liệu
+- `RouteFuelSimulationEngine` — mô phỏng tiêu hao
+- `DrivingBehaviorAnalyzer` — phân tích gia tốc từ sensor/GPS
+- `WarningsEngine` — cảnh báo rule-based
+
+Enum `PremiumFeature.aiAssistant` tồn tại nhưng **không có implementation chatbot**.
+
+### API (External — gọi từ client)
+
+App gọi API bên thứ ba qua HTTP (`http` package + `OsmHttpClient`):
+
+| Dịch vụ | Base URL | Mục đích |
+|---|---|---|
+| Nominatim | `https://nominatim.openstreetmap.org` | Geocoding |
+| OSRM | `https://router.project-osrm.org` | Routing |
+| Overpass | `overpass.kumi.systems`, `lz4.overpass-api.de`, `overpass-api.de` | Trạm xăng |
+| Open-Meteo | `api.open-meteo.com` | Thời tiết |
+| Carto / Esri / OpenTopoMap | Tile URLs trong `map_style.dart` | Bản đồ |
+| Open-Elevation | `OsmConfig.openElevationLookupUrl` (**hiện = chuỗi rỗng**) | Độ cao — **tắt** |
+
+### Authentication
+
+- **Local mock:** email + password plaintext trong JSON (`UserModel.password`).
+- **Session:** `session.currentUserId` trong JSON.
+- **Social login:** demo, cần dart-define; password cố định `social_demo`.
+- **OTP reset:** demo OTP `123456`.
+
+**Không có JWT, OAuth server, Firebase Auth.**
+
+### Payment
+
+- **Demo only:** `PremiumService.processDemoPayment` — delay + ghi flag `premium: true` vào JSON.
+- UI chọn Momo / Bank transfer — **không gọi gateway thật**.
+
+### State Management
+
+| Công cụ | Phạm vi |
+|---|---|
+| `provider` (`ChangeNotifier`) | `LocationService`, `FuelService`, `UserService`, `UserSessionService`, `PremiumService`, `IosSystemBridge` |
+| `flutter_riverpod` | `LauncherShell`, `home_ios` providers (`home_layout_provider`, `launcher_state_provider`, …) |
+| Local `setState` | `HomeShell` (~2500 dòng), các screen lớn |
+
+### Sơ đồ kiến trúc
+
+```mermaid
+flowchart TB
+  subgraph Client["Flutter Client (fuel_tracker_app)"]
+    Main[main.dart]
+    Launcher[LauncherShell / home_ios]
+    Shell[HomeShell - orchestration]
+    Auth[auth feature]
+    Premium[premium feature]
+    Map[map feature]
+    Nav[navigation feature]
+    Fuel[fuel feature]
+    Geo[geocoding feature]
+    Loc[location feature]
+    G3[group3_demo]
+    Shared[shared providers/services]
+    Core[core config/http/theme]
+  end
+
+  subgraph Storage["Local Storage"]
+    JSON[data.json]
+    Prefs[SharedPreferences]
+    Avatars[avatar files]
+  end
+
+  subgraph External["External APIs"]
+    Nominatim[Nominatim OSM]
+    OSRM[OSRM]
+    Overpass[Overpass]
+    Meteo[Open-Meteo]
+    Tiles[Map Tile CDN]
+  end
+
+  Main --> Launcher
+  Main --> Shared
+  Launcher --> Shell
+  Launcher --> G3
+  Shell --> Map
+  Shell --> Nav
+  Shell --> Fuel
+  Shell --> Geo
+  Shell --> Loc
+  Auth --> JSON
+  Premium --> JSON
+  Fuel --> Overpass
+  Nav --> OSRM
+  Geo --> Nominatim
+  Map --> Tiles
+  Fuel --> Meteo
+  Shared --> Prefs
+  Nav --> Prefs
+  Core --> External
 ```
 
 ---
 
-## Cấu trúc code — từng nhánh làm gì
-
-### `lib/main.dart` — Điểm vào app
-
-| Việc làm | Chi tiết |
-|---|---|
-| Khởi tạo | `WidgetsFlutterBinding`, theme hệ thống, `NotificationService` |
-| Bảo vệ | `AppRuntimeGuard`, `AuthorIntegrityGuard` |
-| Web LAN | `WebLanRuntime.logStartup()` |
-| Cây widget | `ProviderScope` → `AppProviders` → `LauncherShell` (hoặc khung iPhone trên desktop) |
-
-**Ai gọi ai:** `main` không chứa logic bản đồ — chỉ lắp provider và shell launcher.
-
----
-
-### `lib/core/` — Lõi dùng chung toàn app
-
-Không phụ thuộc feature cụ thể; cung cấp hạ tầng và token UI.
-
-#### `core/config/`
-
-| File | Chức năng |
-|---|---|
-| `constants.dart` | Hằng số app: dung tích bình, mức tiêu hao mặc định, ngưỡng cảnh báo, timeout UI, … |
-| `osm_config.dart` | URL Nominatim / Overpass / OSRM, User-Agent, header, chế độ CORS Web |
-| `lan_dev_config.dart` | Cấu hình dev Web LAN (hostname, cổng từ `config/lan_web.json`) |
-
-#### `core/network/`
-
-| File | Chức năng |
-|---|---|
-| `osm_http.dart` | `OsmHttpClient`: HTTP có timeout, retry, rate limit Nominatim, xử lý 429 |
-
-#### Các file lõi khác (`core/*.dart`)
-
-| File | Chức năng |
-|---|---|
-| `app_theme.dart` | Theme Material tối, màu brand |
-| `app_runtime_guard.dart` | Bọc `runApp`, bắt lỗi khởi động |
-| `author_integrity_guard.dart` | Kiểm tra chữ ký tác giả khi start |
-| `ios_design_tokens.dart` | Màu/spacing kiểu iOS cho widget chung |
-| `vehicle_ui_tokens.dart` | Token UI dashboard / HUD xe |
-| `interaction_controller.dart` | Điều phối gesture / focus UI trên shell |
-| `motion_director.dart` | Animation spring / cinematic chung |
-| `micro_motion_spec.dart` | Thông số chuyển động micro-interaction |
-| `hmi_intents.dart` | Intent HMI (mở rộng điều khiển) |
-| `ttl_cache.dart` | Cache TTL generic (dùng bởi geocoding, Overpass, …) |
-| `refuel_debug_tools.dart` | Công cụ debug luồng đổ xăng (dev) |
-| `web_lan_runtime.dart` | Log / helper chạy Flutter Web trên LAN |
-
----
-
-### `lib/shared/` — Thành phần dùng lại, không thuộc một feature domain
-
-#### `shared/providers/`
-
-| File | Chức năng |
-|---|---|
-| `app_providers.dart` | `MultiProvider`: đăng ký `LocationService`, `FuelService`, `IosSystemBridge`, `UserSessionService` |
-
-#### `shared/services/`
-
-| File | Chức năng |
-|---|---|
-| `notification_service.dart` | Local notification (cảnh báo xăng thấp, …) |
-| `user_session_service.dart` | Phiên người dùng / prefs cơ bản |
-
-#### `shared/screens/`
-
-| File | Chức năng |
-|---|---|
-| `home_screen.dart` | **Wrapper mỏng** — chỉ `return HomeShell(...)`; giữ API cũ cho `home_ios` |
-| `profile_settings_sheet.dart` | Sheet cài đặt / hồ sơ (mở từ shell) |
-
-#### `shared/widgets/`
-
-| File | Chức năng |
-|---|---|
-| `iphone_17_pro_max_frame.dart` | Khung máy iPhone trên desktop |
-| `ios_style_widgets.dart` | Nút, chip, surface kiểu iOS |
-| `vehicle_dashboard_panel.dart` | Panel dashboard nhiên liệu / quãng đường |
-| `cinematic_sheet.dart` | Bottom sheet có animation cinematic |
-| `web_lan_debug_overlay.dart` | Overlay debug khi chạy Web LAN |
-
----
-
-### `lib/features/shell/` — Lớp điều phối UI (Container App)
-
-**Vai trò:** Ghép map + tìm kiếm + chỉ đường + fuel + bottom nav trên **một màn hình**; quản lý state UI (follow GPS, session restore, animation map). **Không** chứa API OSRM/Nominatim trực tiếp — gọi qua feature khác.
+## 4. Cấu trúc thư mục
 
 ```
-features/shell/
-├── screens/home_shell.dart      ← orchestration chính (~2500 dòng)
-└── widgets/shell_bottom_nav.dart ← thanh dock điều hướng tab
+Mobiapp/
+├── lib/                          # Source Dart chính
+│   ├── main.dart                 # Entry point
+│   ├── core/                     # Config, HTTP, theme, guards, cache
+│   │   ├── config/               # constants, osm_config, lan_dev_config
+│   │   ├── network/              # OsmHttpClient
+│   │   └── theme/                # AppTheme, spacing, motion
+│   ├── shared/                   # Providers, services, widgets dùng chung
+│   │   ├── providers/            # AppProviders (MultiProvider)
+│   │   ├── services/             # Notification, UserSession, Avatar
+│   │   ├── screens/              # HomeScreen wrapper, Profile, Security
+│   │   └── widgets/              # iPhone frame, drawer, toast, dashboard
+│   └── features/
+│       ├── shell/                # HomeShell — điều phối map+nav+fuel
+│       ├── home_ios/             # Launcher iOS giả
+│       ├── map/                  # MapPanel, tile styles
+│       ├── geocoding/            # Nominatim search/reverse
+│       ├── navigation/           # OSRM, HUD, session store
+│       ├── location/             # GPS geolocator
+│       ├── fuel/                 # Xăng, trạm, intelligence engines
+│       ├── auth/                 # Login, register, user data
+│       ├── premium/              # Gói Premium demo
+│       └── group3_demo/          # Demo UI học tập
+├── assets/
+│   └── data/
+│       └── data.json             # Seed database người dùng
+├── test/                         # Unit tests (11 files)
+├── docs/                         # LAN access, Group3 presentation
+├── scripts/                      # PowerShell: LAN, firewall, port utils
+├── config/                       # lan_web.json
+├── tool/                         # Import fix scripts, dev proxy
+├── android/                      # Android native (Kotlin drawer UI một phần)
+├── ios/                          # iOS runner
+├── windows/                      # Windows runner
+└── web/                          # Web manifest, icons
 ```
 
-#### `screens/home_shell.dart`
-
-| Nhóm việc | Mô tả |
-|---|---|
-| Compose UI | `MapPanel`, `MapSearchBar`, `NavigationHud`, `VehicleDashboardPanel`, `ShellBottomNav`, `FuelIntelligenceScreen`, … |
-| Services | `LocationService`, `FuelService`, `MapNavigationRepository`, `GasStationService`, `FuelStationService`, `RouteFuelService` |
-| Flow | Search → `resolvePlace` → `planRoute` → vẽ polyline → bật navigation → theo GPS → off-route reroute |
-| State UI | `_followUser`, `_navigationFollow`, `_activeRoute`, `_stations`, `_refuelPhase`, `AnimatedMapController` |
-| Session | Lưu/khôi phục navigation qua `NavigationSessionStore` |
-| Chế độ launcher | `inLauncherMode`: ẩn chrome iOS giả khi mở từ `AppLaunchOverlay` |
-
-#### `widgets/shell_bottom_nav.dart`
-
-Thanh tab nổi (Map / Fuel / …) — spring indicator, không chứa logic domain.
-
-**Quan hệ:** `HomeScreen` → delegate → `HomeShell`. Code đọc nên vào **`home_shell.dart`**, không vào `shared/screens/home_screen.dart`.
-
----
-
-### `lib/features/home_ios/` — Launcher & giao diện iOS giả
-
-Mô phỏng iPhone: home screen, Dynamic Island, Control Center, mở app Fuel Tracker.
+### Giải thích thư mục chính
 
 | Thư mục | Chức năng |
 |---|---|
-| `core/` | Haptics, spring, squircle, typography, visual tokens |
-| `data/` | Catalog app, layout grid widget, `ios_system_bridge` (snapshot nav cho Island) |
-| `presentation/launcher_shell.dart` | Root Riverpod: overlay, gesture, home indicator |
-| `presentation/pages/ios_home_screen.dart` | Lưới icon, wallpaper, dock |
-| `presentation/widgets/*` | Dynamic Island, notification center, control center, spotlight, app launch overlay |
-| `presentation/providers/*` | Layout home, parallax, launcher state, system overlay |
-
-**Luồng mở app map:** `AppLaunchOverlay` → `HomeScreen(inLauncherMode: true)` → `HomeShell`.
-
----
-
-### `lib/features/map/` — Bản đồ (flutter_map)
-
-| File | Chức năng |
-|---|---|
-| `core/map_style.dart` | Style tile OSM tối / visual map |
-| `presentation/widgets/map_panel.dart` | Widget bản đồ: layer tile, cluster marker cây xăng, polyline tuyến, marker user, rotate/follow |
-
-**Không** gọi OSRM hay Nominatim — nhận `LatLng`, polylines, stations từ **shell** qua props.
+| `lib/core/` | Hạ tầng: OSM config, HTTP client, theme, runtime guards — không phụ thuộc feature |
+| `lib/shared/` | Thành phần tái sử dụng cross-feature: session, notification, account drawer |
+| `lib/features/shell/` | **Orchestrator** — ghép map, search, nav, fuel trên một màn hình |
+| `lib/features/home_ios/` | Launcher giả lập iOS, tách khỏi app map |
+| `lib/features/map/` | Widget bản đồ flutter_map |
+| `lib/features/geocoding/` | Tìm kiếm địa điểm Nominatim |
+| `lib/features/navigation/` | Routing OSRM, HUD, off-route, session persistence |
+| `lib/features/location/` | GPS stream và filter |
+| `lib/features/fuel/` | Nhiên liệu, trạm xăng, intelligence engines + UI |
+| `lib/features/auth/` | Đăng nhập local, user JSON store |
+| `lib/features/premium/` | Premium guard và thanh toán demo |
+| `lib/features/group3_demo/` | Demo food order / Flutter widgets |
+| `assets/data/` | Seed `data.json` |
+| `test/` | Tests cho utils, services |
+| `scripts/` | Dev tooling Web LAN |
 
 ---
 
-### `lib/features/geocoding/` — Địa chỉ & tìm kiếm (Nominatim)
+## 5. Công nghệ sử dụng
 
-| File | Chức năng |
-|---|---|
-| `data/services/nominatim_geocoding_service.dart` | `/search`, `/reverse`, `/lookup`; cache; rate limit |
-| `data/models/place_model.dart` | `PlaceSuggestion`, `PlaceDetails` |
-| `data/models/address_components.dart` | Đường / phường / quận / tỉnh |
-| `data/exceptions/map_navigation_exceptions.dart` | Lỗi mạng, không kết quả, rate limit |
-| `core/vietnamese_text_utils.dart` | Bỏ dấu, biến thể truy vấn có/không dấu |
-| `core/place_location_utils.dart` | Chuẩn hóa tọa độ / bias search |
-| `presentation/widgets/map_search_bar.dart` | Ô tìm kiếm + debounce |
-| `presentation/widgets/place_suggestions_panel.dart` | Danh sách gợi ý địa điểm |
-
-**Facade gọi geocoding:** `MapNavigationRepository` (trong `navigation`) — shell gọi repository, không gọi Nominatim trực tiếp.
-
----
-
-### `lib/features/navigation/` — Chỉ đường (OSRM)
-
-| File | Chức năng |
-|---|---|
-| `data/services/osrm_routing_service.dart` | Gọi OSRM `/route/v1/driving`, trả `RoutePlan` |
-| `data/services/osrm_route_parser.dart` | Parse JSON OSRM, chọn tuyến, decode polyline |
-| `data/models/route_plan.dart` | Khoảng cách, thời gian, điểm polyline thô |
-| `data/models/navigation_route.dart` | Tuyến active: đích, polyline, ETA cho HUD |
-| `data/repositories/map_navigation_repository.dart` | Facade: search + resolve + `planRoute` |
-| `data/session/navigation_session_store.dart` | Persist/khôi phục phiên chỉ đường (SharedPreferences) |
-| `core/polyline_utils.dart` | Densify polyline, khoảng cách điểm–tuyến, điểm theo km |
-| `core/route_progress_utils.dart` | Tiến độ dọc tuyến (km còn lại, snap) |
-| `core/route_label_utils.dart` | Nhãn hướng / instruction hiển thị |
-| `core/route_off_route.dart` | Phát hiện lệch tuyến → reroute / chỉ cập nhật progress |
-| `core/route_snap_warning.dart` | Cảnh báo snap GPS lệch polyline |
-| `presentation/widgets/navigation_hud.dart` | HUD cinematic: km, phút, phase đổ xăng |
+| Hạng mục | Công nghệ | Phiên bản (pubspec) |
+|---|---|---|
+| Framework | Flutter | SDK `>=3.3.0 <4.0.0` |
+| Ngôn ngữ | Dart | 3.x |
+| UI Library | Material + custom iOS tokens | `uses-material-design: true` |
+| State | provider | ^6.1.2 |
+| State | flutter_riverpod | ^3.3.1 |
+| Map | flutter_map | ^7.0.2 |
+| Map animation | flutter_map_animations | ^0.7.1 |
+| Map cluster | flutter_map_marker_cluster | ^1.4.0 |
+| Coordinates | latlong2 | ^0.9.1 |
+| GPS | geolocator | ^13.0.2 |
+| HTTP | http | ^1.2.2 |
+| Local storage | shared_preferences | ^2.5.5 |
+| Notifications | flutter_local_notifications | ^17.2.4 |
+| Sensors | sensors_plus | ^7.0.0 |
+| Fonts | google_fonts | ^6.2.1 |
+| Image | image_picker | ^1.1.2 |
+| Permissions | permission_handler | ^11.4.0 |
+| Animation | flutter_animate | ^4.5.2 |
+| Lint | flutter_lints | ^4.0.0 (dev) |
+| Database | **Không có** | JSON + SharedPreferences |
+| ORM | **Không có** | — |
+| AI Model | **Không có** | Engines rule-based local |
+| Authentication | Local JSON mock | Không Firebase/OAuth server |
+| Payment Gateway | **Không có** | Demo `PremiumService` |
+| Hosting | **Không cấu hình trong repo** | — |
+| Deployment | Flutter build (android/ios/windows/web) | Không Docker/CI trong repo |
+| CI/CD | **Không có** | Không `.github/workflows` |
 
 ---
 
-### `lib/features/location/` — GPS & theo dõi vị trí
+## 6. API Documentation
 
-| File | Chức năng |
+> App **không expose API server**. Dưới đây là các **external API** mà client gọi ra.
+
+### 6.1 Nominatim — Forward Search
+
+| | |
 |---|---|
-| `data/services/location_service.dart` | `geolocator`: stream vị trí, quyền, bearing, tốc độ, khoảng cách tích lũy |
-| `core/gps_position_filter.dart` | Lọc nhiễu GPS (kalman / ngưỡng) |
-| `core/gps_tracking_policy.dart` | Chính sách follow khi navigation: tần suất, ngưỡng off-route |
+| **Endpoint** | `GET {nominatimBase}/search` |
+| **Method** | GET |
+| **Request params** | `q`, `format=json`, `addressdetails=1`, `limit`, `countrycodes=vn`, optional `viewbox`/`bounded` |
+| **Response** | JSON array địa điểm OSM |
+| **Mục đích** | Tìm kiếm địa chỉ |
+| **File** | `lib/features/geocoding/data/services/nominatim_geocoding_service.dart` |
 
-**Ai dùng:** `HomeShell` listen `LocationService`; `route_off_route` dùng `gps_tracking_policy`.
+### 6.2 Nominatim — Reverse
+
+| | |
+|---|---|
+| **Endpoint** | `GET {nominatimBase}/reverse` |
+| **Method** | GET |
+| **Request params** | `lat`, `lon`, `format=json`, `addressdetails=1` |
+| **Response** | JSON địa chỉ tại tọa độ |
+| **Mục đích** | Tọa độ → địa chỉ |
+| **File** | `nominatim_geocoding_service.dart` |
+
+### 6.3 Nominatim — Lookup
+
+| | |
+|---|---|
+| **Endpoint** | `GET {nominatimBase}/lookup` |
+| **Method** | GET |
+| **Request params** | `osm_ids=N/W/R{id}`, `format=json` |
+| **Response** | JSON chi tiết OSM id |
+| **Mục đích** | Bổ sung tọa độ từ place id |
+| **File** | `nominatim_geocoding_service.dart` |
+
+### 6.4 OSRM — Route
+
+| | |
+|---|---|
+| **Endpoint** | `GET {osrmBase}/route/v1/driving/{lon},{lat};{lon},{lat}` |
+| **Method** | GET |
+| **Request params** | `overview=full`, `geometries=geojson`, `steps=false`, `alternatives=true` |
+| **Response** | GeoJSON route, distance, duration |
+| **Mục đích** | Tính tuyến lái xe |
+| **File** | `lib/features/navigation/data/services/osrm_routing_service.dart` |
+
+### 6.5 Overpass — Gas Stations
+
+| | |
+|---|---|
+| **Endpoint** | `POST {overpassEndpoint}` (body Overpass QL) |
+| **Method** | POST |
+| **Request** | Query `amenity=fuel` với `around:` hoặc `bbox` |
+| **Response** | JSON elements (nodes/ways) |
+| **Mục đích** | Lấy trạm xăng |
+| **File** | `lib/features/fuel/data/services/gas_station_service.dart` |
+
+### 6.6 Nominatim Fallback — Fuel Search
+
+| | |
+|---|---|
+| **Endpoint** | `GET {nominatimBase}/search?amenity=fuel` |
+| **Method** | GET |
+| **Mục đích** | Fallback khi Overpass fail |
+| **File** | `gas_station_service.dart` |
+
+### 6.7 Open-Meteo — Weather
+
+| | |
+|---|---|
+| **Endpoint** | `GET api.open-meteo.com/v1/forecast` |
+| **Method** | GET |
+| **Request params** | `latitude`, `longitude`, `current`, `hourly`, `daily`, `timezone=auto` |
+| **Response** | JSON nhiệt độ, gió, weather_code |
+| **Mục đích** | Card thời tiết Fuel Intelligence |
+| **File** | `lib/features/fuel/data/services/weather_service.dart` |
+
+### 6.8 Map Tiles
+
+| | |
+|---|---|
+| **Endpoint** | Carto / Esri / OpenTopoMap tile URLs |
+| **Method** | GET |
+| **Mục đích** | Render bản đồ |
+| **File** | `lib/features/map/core/map_style.dart`, `lib/core/config/osm_config.dart` |
+
+### 6.9 Open-Elevation (chưa bật)
+
+| | |
+|---|---|
+| **Endpoint** | `OsmConfig.openElevationLookupUrl` = `''` (rỗng) |
+| **Trạng thái** | `ElevationService.isConfigured` = false → trả 0 |
+| **File** | `lib/features/fuel/data/services/elevation_service.dart` |
 
 ---
 
-### `lib/features/fuel/` — Nhiên liệu, trạm xăng, intelligence
+## 7. Database Documentation
 
-#### `data/services/`
+> Không có relational database. Schema dưới đây mô tả **JSON local**.
 
-| File | Chức năng |
-|---|---|
-| `fuel_service.dart` | Mức xăng bình, trừ theo km GPS, cảnh báo thấp |
-| `gas_station_service.dart` | Overpass `amenity=fuel`, cache 2 phút |
-| `fuel_station_service.dart` | Chọn trạm gần tuyến / dọc polyline |
-| `route_fuel_service.dart` | Phân tích tiêu hao theo tuyến OSRM |
-| `elevation_service.dart` | Độ cao dọc tuyến (ảnh hưởng consumption model) |
-| `weather_service.dart` | Snapshot thời tiết (card intelligence) |
+### 7.1 Cấu trúc `data.json`
 
-#### `data/models/`
+```json
+{
+  "users": [ UserModel... ],
+  "session": { "currentUserId": "u001" | "" }
+}
+```
 
-| File | Chức năng |
-|---|---|
-| `gas_station.dart` | Trạm xăng: tọa độ, brand, khoảng cách |
-| `route_fuel_analysis.dart` | Kết quả phân tích xăng trên tuyến |
-| `trip_fuel_status.dart` | Trạng thái chuyến: đủ xăng tới đích? |
-| `refuel_flow_phase.dart` | Phase UI đổ xăng trên HUD |
-| `fuel_warning_event.dart` | Sự kiện cảnh báo xăng thấp |
-| `weather_snapshot.dart` | Dữ liệu thời tiết hiển thị |
+**File:** `assets/data/data.json`, `lib/features/auth/models/user_model.dart`
 
-#### `intelligence/`
+### 7.2 Bảng logic: `users`
 
-| Thư mục | Chức năng |
-|---|---|
-| `consumption/` | Model tiêu hao L/100km theo hành vi |
-| `driving_behavior/` | Phân tích gia tốc / phanh từ telemetry |
-| `prediction/` | Dự đoán range, thời điểm cần đổ |
-| `simulation/` | Mô phỏng tiêu hao trên tuyến |
-| `telemetry/` | Mẫu telemetry GPS |
-| `warnings/` | Engine cảnh báo (sắp hết xăng, trạm gần) |
+| Trường | Kiểu | Mô tả |
+|---|---|---|
+| `id` | string | ID user (vd. `u001`) |
+| `name` | string | Tên hiển thị |
+| `email` | string | Email đăng nhập |
+| `password` | string | Mật khẩu plaintext (demo) |
+| `phone` | string | Số điện thoại |
+| `avatar` | string | Đường dẫn tương đối avatar file |
+| `avatarEmoji` | string | Emoji fallback |
+| `vehicle` | string | Tên xe |
+| `premium` | bool | Trạng thái Premium |
+| `premiumPlan` | string | `monthly` / `yearly` / `lifetime` |
+| `premiumExpireAt` | string | ISO date hoặc rỗng (lifetime) |
+| `createdAt` | string | Ngày tạo |
+| `lastLogin` | string | Lần đăng nhập cuối |
+| `tripHistory` | array | Lịch sử chuyến (demo data) |
+| `fuelData` | object | `currentFuel`, `tankCapacity`, `avgConsumption` |
 
-#### `presentation/`
+### 7.3 Bảng logic: `tripHistory[]`
 
-| File | Chức năng |
-|---|---|
-| `screens/fuel_intelligence_screen.dart` | Màn hình tab Fuel Intelligence |
-| `viewmodels/fuel_intelligence_view_model.dart` | Load prediction, warnings, weather |
-| `widgets/fuel_intelligence_shell.dart` | Chrome UI màn fuel |
-| `widgets/fuel_consumption_graph.dart` | Biểu đồ tiêu hao |
-| `widgets/fuel_weather_card.dart` | Card thời tiết |
+| Trường | Kiểu | Mô tả |
+|---|---|---|
+| `title` | string | Tiêu đề |
+| `subtitle` | string | Phụ đề |
+| `detail` | string | Chi tiết |
+| `date` | string | Ngày |
 
----
+**File:** `lib/features/auth/models/user_data_models.dart`
 
-## Kiến trúc tìm kiếm & chỉ đường (chi tiết)
+### 7.4 Bảng logic: `session`
+
+| Trường | Kiểu | Mô tả |
+|---|---|---|
+| `currentUserId` | string | User đang đăng nhập; rỗng = guest |
+
+### 7.5 SharedPreferences keys
+
+| Key | Mục đích | File |
+|---|---|---|
+| `fuel_tracker_user_database_v1` | Toàn bộ JSON (Web) | `user_data_store.dart` |
+| `dark_mode_enabled` | Dark mode | `user_session_service.dart` |
+| `auth_remember_me` | Ghi nhớ đăng nhập | `user_session_service.dart` |
+| `auth_remember_email` | Email đã lưu | `user_session_service.dart` |
+| `navigation_session_v1` | Phiên navigation đang active | `navigation_session_store.dart` |
+| `privacy_share_analytics` | Toggle privacy | `privacy_screen.dart` |
+| `privacy_share_crash_reports` | Toggle privacy | `privacy_screen.dart` |
+| `privacy_keep_trip_history_local` | Toggle privacy | `privacy_screen.dart` |
+
+### 7.6 Quan hệ
 
 ```
-MapNavigationRepository (navigation/data/repositories)
-├── NominatimGeocodingService (geocoding)
-│   ├── /search   — forward geocoding (có/không dấu tiếng Việt)
-│   ├── /reverse  — reverse geocoding (tọa độ → địa chỉ)
-│   └── /lookup   — bổ sung tọa độ OSM id
-└── OsrmRoutingService (navigation)
-    └── /route/v1/driving — polyline + khoảng cách + thời gian
-
-OsmHttpClient (core/network) — timeout, retry, User-Agent, rate limit
-VietnameseTextUtils (geocoding/core)
-AddressComponents (geocoding/data/models)
-```
-
-Widget flow:
-
-```
-MapSearchBar + PlaceSuggestionsPanel (geocoding)
-    → HomeShell._navigateToPlace (shell)
-    → OSRM polyline trên MapPanel (map) + NavigationHud (navigation)
+session.currentUserId ──► users.id (1:1 active session)
+users.id ──► avatars/{id}.jpg (1:0..1 file)
+users.fuelData ◄── sync ──► FuelService (runtime)
+navigation_session_v1 (độc lập, không FK tới users)
 ```
 
 ---
 
-## Luồng chức năng chính (end-to-end)
+## 8. Luồng hoạt động hệ thống
 
-1. `LocationService` đọc GPS realtime.
-2. `MapNavigationRepository` tìm điểm đến (Nominatim) và tính tuyến (OSRM).
-3. `RouteFuelService` + `FuelService` tính tiêu hao, range, cảnh báo.
-4. `GasStationService` / `FuelStationService` lấy và lọc cây xăng.
-5. `HomeShell` zoom map, vẽ polyline, bật `NavigationHud`, follow camera.
-6. Off-route → `route_off_route` → reroute OSRM; session lưu bởi `NavigationSessionStore`.
+> Dự án **không phải** hệ thống đặt vé xe. Luồng thực tế:
+
+### 8.1 Khởi động app
+
+```
+main() → AppRuntimeGuard → AuthorIntegrityGuard → NotificationService.init()
+  → FuelTrackerApp → ProviderScope → AppProviders → LauncherShell (iOS home)
+```
+
+### 8.2 Mở Fuel Tracker từ launcher
+
+```
+Tap icon Fuel Tracker → AppLaunchOverlay → HomeScreen(inLauncherMode: true)
+  → HomeShell → LocationService.startListening() → MapPanel hiển thị GPS
+```
+
+### 8.3 Tìm địa điểm & chỉ đường
+
+```
+MapSearchBar nhập địa chỉ
+  → NominatimGeocodingService.search (debounce + rate limit)
+  → Chọn PlaceDetails
+  → MapNavigationRepository.planRoute (OSRM)
+  → RouteFuelService.analyze + GasStationService
+  → MapPanel vẽ polyline + NavigationHud
+  → GPS follow + off-route reroute
+```
+
+### 8.4 Quản lý nhiên liệu trên tuyến
+
+```
+LocationService.onDistanceTraveled
+  → FuelService.consumeDistanceMeters
+  → Nếu thấp ngưỡng → FuelWarningEvent + NotificationService
+  → HUD refuel flow: đi trạm gần → arrived → tiếp tục tuyến gốc
+```
+
+### 8.5 Đăng nhập & Premium
+
+```
+AccountDrawer → LoginScreen
+  → UserService.login (kiểm tra JSON)
+  → UserSessionService sync state
+
+PremiumScreen → PremiumService.processDemoPayment
+  → UserService.updatePremium → data.json
+  → PremiumGuard mở khóa Fuel Intelligence / Trip History
+```
+
+### 8.6 Fuel Intelligence (cần Premium)
+
+```
+ShellBottomNav tab Fuel
+  → FuelIntelligenceScreen (PremiumGuard)
+  → FuelIntelligenceViewModel: prediction + weather + stations ranking
+```
+
+### 8.7 Khôi phục phiên navigation
+
+```
+App resume / HomeShell init
+  → NavigationSessionStore.load (SharedPreferences)
+  → Nếu < 12h → restore polyline + destination
+```
 
 ---
 
-## Yêu cầu để chạy
+## 9. Hướng dẫn cài đặt
 
-- Flutter SDK: `>=3.3.0 <4.0.0`
-- Kết nối Internet (Nominatim / Overpass / OSRM public)
-- Quyền vị trí (Android / Windows / iOS)
+### Clone project
 
-## Chạy nhanh
+```bash
+git clone <repository-url>
+cd Mobiapp
+```
+
+### Cài dependencies
 
 ```bash
 flutter clean
 flutter pub get
-flutter run -d windows
-# hoặc:
-flutter run -d android
 ```
 
-## Truy cập từ điện thoại cùng Wi-Fi (Flutter Web)
+### ENV variables / Dart defines
 
-- Hướng dẫn (Tiếng Việt): [docs/LAN_ACCESS_VI.md](docs/LAN_ACCESS_VI.md)
-- Chi tiết kỹ thuật (中文): [docs/LAN_ACCESS.md](docs/LAN_ACCESS.md)
+| Biến | Mục đích | Mặc định |
+|---|---|---|
+| `OSM_DEV_PROXY` | Proxy CORS cho Web LAN | Không set |
+| `GOOGLE_LOGIN_CONFIGURED` | Bật social Google | `false` |
+| `FACEBOOK_LOGIN_CONFIGURED` | Bật social Facebook | `false` |
+
+Cấu hình LAN Web: `config/lan_web.json`
+
+### Chạy local
+
+```bash
+# Windows
+flutter run -d windows
+
+# Android
+flutter run -d android
+
+# Web
+flutter run -d chrome
+```
+
+### Web LAN (truy cập từ điện thoại cùng Wi-Fi)
 
 ```powershell
 cd D:\Mobiapp
-.\scripts\fix_lan_firewall.ps1 -SetWiFiPrivate   # một lần (Admin/UAC)
-.\scripts\run_web_lan.ps1                         # chạy Web LAN — mở URL in ra trên điện thoại
+.\scripts\fix_lan_firewall.ps1 -SetWiFiPrivate   # một lần (Admin)
+.\scripts\run_web_lan.ps1
 ```
 
-Trên điện thoại mở **đúng URL in trong terminal** (vd. `http://192.168.1.42:8081` nếu 8080 đã bận). Cổng ưu tiên: `config/lan_web.json`.
+Chi tiết: [docs/LAN_ACCESS_VI.md](docs/LAN_ACCESS_VI.md)
 
-## Tính năng chính
+### Build production
 
-- Bản đồ tối OSM, marker cluster cây xăng
-- Tuyến đỏ OSRM + ETA / km / thời gian
-- Tìm kiếm địa chỉ tiếng Việt (có/không dấu) — đường, phường, quận, tỉnh
-- Reverse geocoding qua Nominatim
-- Timeout + retry mạng tự động
-- GPS pulse, camera follow + xoay theo hướng di chuyển
-
-## Lưu ý API công cộng
-
-- **Nominatim**: ~1 request/giây — app debounce + rate limit
-- **Overpass**: cache 2 phút quanh vị trí user
-- **OSRM** demo: chỉ phát triển; production nên self-host OSRM
-
-## Import trong code
-
-Toàn bộ `lib/` dùng:
-
-```dart
-import 'package:fuel_tracker_app/...';
+```bash
+flutter build apk          # Android
+flutter build ios          # iOS (cần macOS)
+flutter build windows      # Windows
+flutter build web          # Web
 ```
 
-Ví dụ:
+**Yêu cầu runtime:**
 
-```dart
-import 'package:fuel_tracker_app/features/shell/screens/home_shell.dart';
-import 'package:fuel_tracker_app/features/navigation/data/repositories/map_navigation_repository.dart';
-```
+- Flutter SDK `>=3.3.0`
+- Internet (Nominatim / Overpass / OSRM / tiles)
+- Quyền vị trí (mobile/desktop)
 
 ---
 
-## Mức kiến trúc hiện tại
+## 10. Các tính năng đang phát triển / chưa hoàn thiện
 
-**Clean Feature-Based + Shell Layer (Production Ready)**
+| Mục | Trạng thái | Dẫn chứng |
+|---|---|---|
+| Payment gateway thật | Chưa có — chỉ demo | `PremiumService.processDemoPayment` |
+| Social login OAuth | Cần dart-define; chưa tích hợp SDK | `user_session_service.dart` `_isSocialProviderConfigured` |
+| AI Assistant / Chatbot | Enum có, không có UI/API | `PremiumFeature.aiAssistant` |
+| Export PDF/Excel | Enum Premium, chưa implement | `PremiumFeature.exportPdf`, `exportExcel` |
+| Multi-device sync | Enum Premium, chưa implement | `PremiumFeature.multiDeviceSync` |
+| Trip history tự động | Dữ liệu demo tĩnh trong JSON | `UserService.addTripHistory` tồn tại nhưng không gọi từ navigation |
+| Open-Elevation | URL rỗng, luôn trả 0 | `osm_config.dart` `openElevationLookupUrl = ''` |
+| Manage Membership button | `onPressed: null` | `profile_settings_sheet.dart` L1331 |
+| iOS launcher placeholder apps | Icon only, không mở app | `ios_app_catalog.dart` (trừ fuel_tracker, group3) |
+| Mật khẩu plaintext | Demo local, không production-ready | `UserModel.password` trong JSON |
+| CI/CD / Docker | Không có trong repo | Không tìm thấy `.github/`, `Dockerfile` |
+| OTP reset password | OTP cố định `123456` | `UserSessionService.mockOtp` |
 
-| Lớp | Ý nghĩa |
+---
+
+## Import trong code
+
+Toàn bộ `lib/` dùng package import:
+
+```dart
+import 'package:fuel_tracker_app/features/shell/screens/home_shell.dart';
+```
+
+## Điểm bắt đầu đọc code
+
+| Mục tiêu | File |
 |---|---|
-| `features/*` | Domain: map, geocoding, navigation, location, fuel |
-| `features/shell` | Orchestration UI — ghép feature trên một màn hình |
-| `features/home_ios` | Launcher iOS (tách khỏi map app) |
-| `shared` | Providers, notification, widget dùng chung |
-| `core` | Config, HTTP, theme, motion |
+| Luồng map + nav + fuel | `lib/features/shell/screens/home_shell.dart` |
+| API OSRM / geocoding facade | `lib/features/navigation/data/repositories/map_navigation_repository.dart` |
+| User / auth | `lib/features/auth/services/user_service.dart` |
+| Launcher iOS | `lib/features/home_ios/presentation/launcher_shell.dart` |
 
-Đọc code map/nav: vào **`features/shell/screens/home_shell.dart`**. Đọc API OSRM/Nominatim: vào **`navigation`** + **`geocoding`**.
+---
+
+## Tài liệu dự án
+
+| File | Nội dung |
+|---|---|
+| [README.md](README.md) | Tài liệu hệ thống (file này) |
+| [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) | Phân tích kỹ thuật, thống kê, đánh giá chất lượng |
+| [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md) | Cơ cấu team: Hoàng, Đăng Khoa, Khánh, Nguyên, No |
+
+---
+
+*Tài liệu sinh từ phân tích source code thực tế (196 file Dart, ~31.566 dòng) — cập nhật: 2026-06-24.*

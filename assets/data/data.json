@@ -13,7 +13,7 @@
       "premiumPlan": "yearly",
       "premiumExpireAt": "2027-06-17",
       "createdAt": "2026-01-01",
-      "lastLogin": "2026-06-17",
+      "lastLogin": "2026-06-18",
       "tripHistory": [
         {
           "title": "Phân tích AI nhiên liệu",
@@ -137,9 +137,51 @@
         "tankCapacity": 45.0,
         "avgConsumption": 4.5
       }
+    },
+    {
+      "id": "u006",
+      "name": "vvv",
+      "email": "123@example.com",
+      "password": "123123",
+      "phone": "1",
+      "avatar": "",
+      "avatarEmoji": "🏍️",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": true,
+      "premiumPlan": "yearly",
+      "premiumExpireAt": "2027-06-18",
+      "createdAt": "2026-06-18",
+      "lastLogin": "2026-06-18",
+      "tripHistory": [],
+      "fuelData": {
+        "currentFuel": 11.997209100472139,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.5
+      }
+    },
+    {
+      "id": "u007",
+      "name": "1",
+      "email": "1@gmail.com",
+      "password": "123456",
+      "phone": "1",
+      "avatar": "",
+      "avatarEmoji": "🏍️",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": false,
+      "premiumPlan": "",
+      "premiumExpireAt": "",
+      "createdAt": "2026-06-18",
+      "lastLogin": "2026-06-18",
+      "tripHistory": [],
+      "fuelData": {
+        "currentFuel": 12.0,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.5
+      }
     }
   ],
   "session": {
-    "currentUserId": ""
+    "currentUserId": "u001"
   }
 }
