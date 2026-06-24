@@ -23,18 +23,6 @@ RACI đầy đủ: [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md)
 ## 1. Phân tích tổng thể dự án
 
 ### 1.1 Quy mô dự án
-
-| Chỉ số | Giá trị |
-|---|---|
-| Tổng file (không tính `.git`, `build`, `.dart_tool`) | ~800 |
-| File Dart | 196 |
-| Dòng code Dart | ~31.566 |
-| Feature modules (`lib/features/`) | 9 (shell, home_ios, map, geocoding, navigation, location, fuel, auth, premium, group3_demo) |
-| Unit test files | 11 |
-| Nền tảng hỗ trợ | Android, iOS, Windows, Web (có runner/config) |
-| Backend server | **Không có** |
-| Database SQL | **Không có** |
-
 **Phân loại:** Ứng dụng Flutter client-heavy, tích hợp nhiều API OSM bên thứ ba, có lớp demo auth/premium local và launcher iOS giả lập.
 
 **File lớn nhất (rủi ro maintainability):**
