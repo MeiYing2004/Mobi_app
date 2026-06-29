@@ -14,7 +14,7 @@
 | **Đăng Khoa** | Lead Backend |
 | **Khánh** | Data Engineer |
 | **Nguyên** | AI Engineer |
-| **No** | DevOps & QA |
+| **Đình** | DevOps & QA |
 
 Chi tiết phân công, RACI và onboarding: [TEAM_STRUCTURE.md](TEAM_STRUCTURE.md)
 
