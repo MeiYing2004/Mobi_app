@@ -1,3 +1,5 @@
+import 'dart:io'; // 🔥 THÊM THƯ VIỆN DART:IO ĐỂ SỬ DỤNG LỚP FILE
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -202,6 +204,13 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
           ok = true;
           _preferEmoji = true;
           break;
+      }
+
+      // 🔥 CHỦ ĐỘNG TRỤC XUẤT ĐƯỜNG DẪN ẢNH CŨ KHỎI BỘ NHỚ ĐỆM IMAGECACHE CỦA FLUTTER
+      if (ok && action != AvatarPickerAction.remove && svc.avatarImagePath != null) {
+        try {
+          await FileImage(File(svc.avatarImagePath!)).evict();
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('[ProfileSettingsSheet] Lỗi Avatar: $e');

@@ -28,9 +28,21 @@ class UserAvatarWidget extends StatelessWidget {
 
     Widget avatar;
     if (session.hasCustomAvatar) {
+      final file = File(session.avatarImagePath!);
+
+      // 🔥 LOGIC KHẮC PHỤC BUG CACHE ẢNH CŨ: Lấy mốc thời gian sửa đổi file thực tế trên đĩa cứng
+      int fileTimestamp = 0;
+      try {
+        if (file.existsSync()) {
+          fileTimestamp = file.lastModifiedSync().millisecondsSinceEpoch;
+        }
+      } catch (_) {}
+
       avatar = ClipOval(
         child: Image.file(
-          File(session.avatarImagePath!),
+          file,
+          // Sử dụng Key kết hợp đường dẫn và timestamp để bẻ gãy bộ nhớ đệm cũ khi có ảnh mới
+          key: ValueKey('${session.avatarImagePath}_$fileTimestamp'),
           width: size,
           height: size,
           fit: BoxFit.cover,

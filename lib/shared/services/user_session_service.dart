@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fuel_tracker_app/features/auth/models/user_data_models.dart';
@@ -73,8 +72,8 @@ class UserSessionService extends ChangeNotifier {
 
   Future<void> init() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      _documentsPath = dir.path;
+      // 🔥 THAY ĐỔI GỐC: Ép đường dẫn Documents trỏ thẳng vào thư mục assets của Project thay vì thư mục hệ thống Windows
+      _documentsPath = '${Directory.current.path}${Platform.pathSeparator}assets';
 
       await _userService?.init();
 
@@ -160,8 +159,6 @@ class UserSessionService extends ChangeNotifier {
 
     if (normalized.startsWith('avatars/')) {
       final full = '$documentsPath${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
-      // Trên desktop, đôi khi file chưa kịp "existsSync" tại thời điểm rebuild.
-      // Luôn trả path để Image.file tự fallback qua errorBuilder nếu lỗi.
       return full;
     }
 
@@ -171,7 +168,6 @@ class UserSessionService extends ChangeNotifier {
       return avatar;
     }
 
-    // Legacy: chỉ tên file avatar_u002.jpg
     final legacy = '$documentsPath${Platform.pathSeparator}avatars${Platform.pathSeparator}$avatar';
     return legacy;
   }
@@ -187,16 +183,15 @@ class UserSessionService extends ChangeNotifier {
   }
 
   String get premiumPlanLabel => switch (premiumPlan) {
-        'monthly' => 'Monthly',
-        'yearly' => 'Yearly',
-        'lifetime' => 'Lifetime',
-        _ => premiumPlan.isEmpty ? '—' : premiumPlan,
-      };
+    'monthly' => 'Monthly',
+    'yearly' => 'Yearly',
+    'lifetime' => 'Lifetime',
+    _ => premiumPlan.isEmpty ? '—' : premiumPlan,
+  };
 
   int get tripCount => tripHistory.length;
 
   bool get hasCustomAvatar {
-    // Chỉ cần có path là thử render; nếu file lỗi thì UI fallback emoji.
     return avatarImagePath != null && avatarImagePath!.trim().isNotEmpty;
   }
 
@@ -442,7 +437,6 @@ class UserSessionService extends ChangeNotifier {
     return true;
   }
 
-  /// Bước 2 — xác nhận OTP demo, giữ phiên đặt lại mật khẩu.
   Future<bool> confirmPasswordResetOtp(String otp) async {
     lastAuthError = null;
     final code = otp.trim();
@@ -462,7 +456,6 @@ class UserSessionService extends ChangeNotifier {
     return true;
   }
 
-  /// Bước 3 — đặt mật khẩu mới sau khi OTP đã xác nhận.
   Future<bool> resetPasswordAfterOtp({
     required String newPassword,
     required String confirmPassword,
@@ -559,7 +552,6 @@ class UserSessionService extends ChangeNotifier {
     debugPrint('AVATAR_UI_REFRESHED');
   }
 
-  /// Chọn ảnh từ gallery/camera, copy vào documents và cập nhật data.json ngay.
   Future<bool> pickAndPersistAvatar({
     required BuildContext context,
     required ImageSource source,
@@ -582,6 +574,7 @@ class UserSessionService extends ChangeNotifier {
       return null;
     }
 
+    // Tạo thư mục assets/avatars/ ngay trong project nếu chưa có
     final avatarsDir = Directory('$_documentsPath/avatars');
     if (!await avatarsDir.exists()) {
       await avatarsDir.create(recursive: true);
@@ -609,7 +602,6 @@ class UserSessionService extends ChangeNotifier {
     return dest.path;
   }
 
-  /// Xóa ảnh avatar — quay về emoji, cập nhật data.json.
   Future<void> clearAvatarImage() async {
     final svc = _userService;
     final userId = svc?.currentUser?.id;
@@ -621,7 +613,6 @@ class UserSessionService extends ChangeNotifier {
       await file.delete();
     }
 
-    // Legacy file
     final legacy = File('$_documentsPath/avatars/avatar_$userId.jpg');
     if (await legacy.exists()) {
       await legacy.delete();
