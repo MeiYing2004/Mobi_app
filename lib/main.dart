@@ -4,15 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 
-import 'package:fuel_tracker_app/core/app_runtime_guard.dart';
-import 'package:fuel_tracker_app/core/author_integrity_guard.dart';
-import 'package:fuel_tracker_app/core/app_theme.dart';
-import 'package:fuel_tracker_app/core/web_lan_runtime.dart';
-import 'package:fuel_tracker_app/features/home_ios/presentation/launcher_shell.dart';
-import 'package:fuel_tracker_app/shared/providers/app_providers.dart';
-import 'package:fuel_tracker_app/shared/services/notification_service.dart';
-import 'package:fuel_tracker_app/shared/services/user_session_service.dart';
-import 'package:fuel_tracker_app/shared/widgets/iphone_17_pro_max_frame.dart';
 import 'package:fuel_tracker_app/shared/widgets/toast/toast_service.dart';
 import 'package:fuel_tracker_app/shared/widgets/web_lan_debug_overlay.dart';
 
