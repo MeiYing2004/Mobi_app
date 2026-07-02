@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fuel_tracker_app/core/theme/app_spacing.dart';
-import 'package:fuel_tracker_app/features/home_ios/presentation/providers/home_layout_provider.dart';
-import 'package:fuel_tracker_app/features/home_ios/presentation/widgets/ios_shell_insets.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:fuel_tracker_app/core/ios_design_tokens.dart';
 
 /// Khung iOS cho màn Phân tích nhiên liệu — status bar + nội dung + home indicator.
 ///
@@ -20,7 +19,7 @@ class FuelIntelligenceShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         systemNavigationBarColor: Colors.transparent,
@@ -28,7 +27,7 @@ class FuelIntelligenceShell extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: DecoratedBox(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -57,38 +56,51 @@ class FuelIntelligenceShell extends StatelessWidget {
 
 class _FuelScreenHeader extends StatelessWidget {
   const _FuelScreenHeader({
-    this.onClose,
+    required this.onClose,
   });
 
-  final VoidCallback? onClose;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
-
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 6, AppSpacing.medium, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            onPressed: onClose ?? () => Navigator.maybePop(context),
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32),
-            color: onSurface.withValues(alpha: 0.7),
+          const Text(
+            'Fuel Intelligence',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
           ),
-          const Expanded(child: SizedBox()),
-          const SizedBox(width: 48),
+          IconButton(
+            onPressed: onClose,
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Loading chỉ phủ vùng nội dung — không che status bar / home indicator.
 class FuelIntelligenceContentLoader extends StatelessWidget {
-  const FuelIntelligenceContentLoader({super.key, this.message});
-
-  final String? message;
+  const FuelIntelligenceContentLoader({super.key, required this.message});
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -96,19 +108,25 @@ class FuelIntelligenceContentLoader extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: Color(0xFF0A84FF)),
-          if (message != null) ...[
-            const SizedBox(height: 14),
-            Text(
-              message!,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontWeight: FontWeight.w600,
-              ),
+          const SizedBox(
+            width: 40,
+            height: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(IosDesign.neonCyan),
             ),
-          ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            message,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
-      ),
+      ).animate().fadeIn(),
     );
   }
 }
@@ -125,40 +143,49 @@ class FuelIntelligenceEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset =
-        IosShellInsets.maybeOf(context)?.bottom ??
-        IosHomeMetrics.of(context).shellBottomInset;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, 24.0 + bottomInset),
-      child: Center(
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.local_gas_station_outlined,
-              size: 48,
-              color: Colors.white.withValues(alpha: 0.35),
+              Icons.analytics_outlined,
+              size: 64,
+              color: Colors.white.withValues(alpha: 0.15),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 24),
             Text(
               message,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.72),
-                fontWeight: FontWeight.w700,
-                height: 1.35,
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 15,
+                height: 1.5,
               ),
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Thử lại'),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: onRetry,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: IosDesign.neonCyan.withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    'Thử lại',
+                    style: TextStyle(
+                      color: IosDesign.neonCyan,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
               ),
             ],
           ],
-        ),
+        ).animate().fadeIn(),
       ),
     );
   }

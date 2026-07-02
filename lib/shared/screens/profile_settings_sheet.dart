@@ -8,7 +8,6 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:fuel_tracker_app/core/vehicle_ui_tokens.dart';
 import 'package:fuel_tracker_app/features/fuel/data/services/fuel_service.dart';
 import 'package:fuel_tracker_app/shared/services/user_session_service.dart';
-import 'package:fuel_tracker_app/shared/services/avatar_service.dart';
 import 'package:fuel_tracker_app/shared/widgets/avatar/avatar_picker_sheet.dart';
 import 'package:fuel_tracker_app/shared/widgets/avatar/user_avatar_widget.dart';
 import 'package:fuel_tracker_app/shared/widgets/ios_style_widgets.dart';
@@ -406,7 +405,7 @@ class _ProfileSettingsSheetState extends State<ProfileSettingsSheet> {
                 const SizedBox(height: 18),
                 const _SectionHeader(title: 'About'),
                 const SizedBox(height: 12),
-                _AboutCard(
+                const _AboutCard(
                   version: OsmConfig.appVersion,
                   developer: 'Mobiapp',
                 ),

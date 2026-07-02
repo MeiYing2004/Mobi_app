@@ -74,7 +74,7 @@ class AccountDrawerHeader extends StatelessWidget {
     return GlowingAvatar(
       size: 72,
       glowColor: session.isPremiumActive ? LuxuryTokens.gold : LuxuryTokens.neonBlue,
-      child: UserAvatarWidget(size: 72, fontSize: 34),
+      child: const UserAvatarWidget(size: 72, fontSize: 34),
     ).animate().fadeIn(duration: 400.ms).scale(
           begin: const Offset(0.85, 0.85),
           curve: Curves.elasticOut,

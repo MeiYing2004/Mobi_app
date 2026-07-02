@@ -185,7 +185,7 @@ class _PrivacyToggle extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF0A84FF),
+            activeTrackColor: const Color(0xFF0A84FF),
           ),
         ],
       ),

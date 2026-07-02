@@ -303,17 +303,17 @@ class _PremiumHeroCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const AnimatedCrownHero(size: 40),
-              const SizedBox(width: 12),
+              AnimatedCrownHero(size: 40),
+              SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Thành viên Premium',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: LuxuryTokens.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -335,10 +335,10 @@ class _PremiumHeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          _HeroBullet(text: 'Phân tích nhiên liệu AI'),
-          _HeroBullet(text: 'Tối ưu lộ trình thông minh'),
-          _HeroBullet(text: 'Báo cáo nâng cao'),
-          _HeroBullet(text: 'Lịch sử không giới hạn'),
+          const _HeroBullet(text: 'Phân tích nhiên liệu AI'),
+          const _HeroBullet(text: 'Tối ưu lộ trình thông minh'),
+          const _HeroBullet(text: 'Báo cáo nâng cao'),
+          const _HeroBullet(text: 'Lịch sử không giới hạn'),
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,

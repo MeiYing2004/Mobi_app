@@ -1987,7 +1987,7 @@ class _HomeShellState extends State<HomeShell>
                                 boxShadow: VehicleUi.floatingShadowNear,
                               ),
                               alignment: Alignment.center,
-                              child: UserAvatarWidget(size: 44, fontSize: 20),
+                              child: const UserAvatarWidget(size: 44, fontSize: 20),
                             ),
                           ),
                         ],

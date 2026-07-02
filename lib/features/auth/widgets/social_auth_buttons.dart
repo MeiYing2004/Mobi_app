@@ -26,10 +26,10 @@ class SocialAuthButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
+        const Row(
           children: [
             Expanded(child: Divider(color: AuthTokens.glassBorder)),
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 12),
               child: Text(
                 'hoặc tiếp tục với',

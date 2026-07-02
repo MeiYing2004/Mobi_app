@@ -65,10 +65,10 @@ class AuthScaffold extends StatelessWidget {
                     children: [
                       if (showBack)
                         Animate(
-                          effects: [
+                          effects: const [
                             FadeEffect(duration: AuthTokens.durationFast),
                             SlideEffect(
-                              begin: const Offset(-0.1, 0),
+                              begin: Offset(-0.1, 0),
                               end: Offset.zero,
                               duration: AuthTokens.durationFast,
                               curve: AuthTokens.curve,
