@@ -1,0 +1,187 @@
+{
+  "users": [
+    {
+      "id": "u001",
+      "name": "Admin",
+      "email": "admin@gmail.com",
+      "password": "123456",
+      "phone": "0123456789",
+      "avatar": "",
+      "avatarEmoji": "🏍️",
+      "vehicle": "BMW R1250GS",
+      "premium": true,
+      "premiumPlan": "yearly",
+      "premiumExpireAt": "2027-06-17",
+      "createdAt": "2026-01-01",
+      "lastLogin": "2026-07-02",
+      "tripHistory": [
+        {
+          "title": "Phân tích AI nhiên liệu",
+          "subtitle": "Hôm nay, 14:32",
+          "detail": "2.4 km phân tích",
+          "date": "2026-06-17"
+        },
+        {
+          "title": "Báo cáo PDF tháng 5",
+          "subtitle": "12/06/2026",
+          "detail": "Đã xuất",
+          "date": "2026-06-12"
+        }
+      ],
+      "fuelData": {
+        "currentFuel": 38.0,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.2
+      }
+    },
+    {
+      "id": "u002",
+      "name": "Hoàng",
+      "email": "hihi@gmail.com",
+      "password": "123456",
+      "phone": "123456789",
+      "avatar": "avatars/u002.jpg",
+      "avatarEmoji": "🏍️",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": true,
+      "premiumPlan": "yearly",
+      "premiumExpireAt": "2027-06-17",
+      "createdAt": "2026-06-17",
+      "lastLogin": "2026-06-17",
+      "tripHistory": [
+        {
+          "title": "Bản đồ thời gian thực",
+          "subtitle": "05/06/2026",
+          "detail": "45 phút",
+          "date": "2026-06-05"
+        }
+      ],
+      "fuelData": {
+        "currentFuel": 7.470191251156402,
+        "tankCapacity": 14.0,
+        "avgConsumption": 4.8
+      }
+    },
+    {
+      "id": "u003",
+      "name": "nguyenvanb",
+      "email": "abc@gmail.com",
+      "password": "123321",
+      "phone": "87",
+      "avatar": "avatars/u003.jpg",
+      "avatarEmoji": "🚗",
+      "vehicle": "Toyota Vios",
+      "premium": true,
+      "premiumPlan": "monthly",
+      "premiumExpireAt": "2026-07-17",
+      "createdAt": "2026-06-17",
+      "lastLogin": "2026-06-17",
+      "tripHistory": [
+        {
+          "title": "Dự đoán quãng đường",
+          "subtitle": "10/06/2026",
+          "detail": "Hà Nội → Hải Phòng",
+          "date": "2026-06-10"
+        },
+        {
+          "title": "Đồng bộ thiết bị",
+          "subtitle": "08/06/2026",
+          "detail": "iPhone + Windows",
+          "date": "2026-06-08"
+        }
+      ],
+      "fuelData": {
+        "currentFuel": 41.998219255218594,
+        "tankCapacity": 42.0,
+        "avgConsumption": 6.5
+      }
+    },
+    {
+      "id": "u004",
+      "name": "Người dùng Google",
+      "email": "google.user@fueltracker.app",
+      "password": "social_demo",
+      "phone": "",
+      "avatar": "",
+      "avatarEmoji": "🏍️",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": false,
+      "premiumPlan": "",
+      "premiumExpireAt": "",
+      "createdAt": "2026-06-17",
+      "lastLogin": "2026-06-17",
+      "tripHistory": [],
+      "fuelData": {
+        "currentFuel": 12.0,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.5
+      }
+    },
+    {
+      "id": "u005",
+      "name": "Người dùng Facebook",
+      "email": "facebook.user@fueltracker.app",
+      "password": "social_demo",
+      "phone": "",
+      "avatar": "",
+      "avatarEmoji": "🛵",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": false,
+      "premiumPlan": "",
+      "premiumExpireAt": "",
+      "createdAt": "2026-06-17",
+      "lastLogin": "2026-06-17",
+      "tripHistory": [],
+      "fuelData": {
+        "currentFuel": 12.0,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.5
+      }
+    },
+    {
+      "id": "u006",
+      "name": "vvv",
+      "email": "123@example.com",
+      "password": "123123",
+      "phone": "1",
+      "avatar": "",
+      "avatarEmoji": "🏍️",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": true,
+      "premiumPlan": "yearly",
+      "premiumExpireAt": "2027-06-18",
+      "createdAt": "2026-06-18",
+      "lastLogin": "2026-06-18",
+      "tripHistory": [],
+      "fuelData": {
+        "currentFuel": 11.997209100472139,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.5
+      }
+    },
+    {
+      "id": "u007",
+      "name": "1",
+      "email": "1@gmail.com",
+      "password": "123456",
+      "phone": "1",
+      "avatar": "",
+      "avatarEmoji": "🏍️",
+      "vehicle": "Kawasaki Ninja 400",
+      "premium": false,
+      "premiumPlan": "",
+      "premiumExpireAt": "",
+      "createdAt": "2026-06-18",
+      "lastLogin": "2026-06-18",
+      "tripHistory": [],
+      "fuelData": {
+        "currentFuel": 12.0,
+        "tankCapacity": 45.0,
+        "avgConsumption": 4.5
+      }
+    }
+  ],
+  "session": {
+    "currentUserId": "u001"
+  }
+}
